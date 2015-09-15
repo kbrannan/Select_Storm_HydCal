@@ -32,6 +32,10 @@ for(ii in 1:length(chr.prec.files)) {
                              summaryBy(.~date+src,data=tmp.df.precip,FUN=sum)
     )
   }
+  
+# clean up within loop
   rm(list=ls(pattern="^tmp\\."))
 }
 
+# cleanup in script
+rm(list=c(ls(pattern="^chr.prec"),"ii"))
