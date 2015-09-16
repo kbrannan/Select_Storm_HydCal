@@ -1,5 +1,14 @@
+## script reads in and adds date (in POSIXct format) observed flow data
+## for OWRD station 14306030 on the Yaquina River north of Chitwood, OR.
+## I am using publised and provisional mean data daily flow data (in cfs)
+## for the period of 1995-10-01 to 2014-09-30. I downloaded the data 
+## manually from:
+
 # load packages
 library(doBy)
+
+# check environment for existing data to keep
+if(length(ls(all.names=TRUE)) > 0) tmp.hold <- paste0("(",ls(all.names=TRUE),")",collapse="|")
 
 # set path for the precip data files
 chr.prec.dir <- paste0(strsplit(getwd(),split="/R_projs",fixed=TRUE)[[1]][1],
@@ -37,5 +46,14 @@ for(ii in 1:length(chr.prec.files)) {
   rm(list=ls(pattern="^tmp\\."))
 }
 
-# cleanup in script
-rm(list=c(ls(pattern="^chr.prec"),"ii"))
+# create rename "date" variable to "date_org". The orginal dat is a factor 
+# class. I added a new date variable that is a POSIXct class and later functions
+# use this class of date 
+ 
+names(df.daily.precip) <- gsub("^date$", "date_org", names(df.daily.precip))
+df.daily.precip <- cbind(df.daily.precip,
+                         date=as.POSIXct(strptime(df.daily.precip[,1], 
+                                                  format="%Y-%m-%d")))
+# clean up
+if(1*exists("tmp.hold")==0) rm(list=ls(all.names=TRUE)[-grep("df.daily.precip",ls(all.names=TRUE))])
+if(1*exists("tmp.hold")==1) rm(list=ls(all.names=TRUE)[-grep(paste0("(df.daily.precip)|",tmp.hold),ls(all.names=TRUE))])
