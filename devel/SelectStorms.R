@@ -9,6 +9,10 @@ spn <- 5 ## span of 5 days to find mins and maxs
 # precip data to clip (shorten) the estimated flow data
 dt.max.p <- max(df.daily.precip$date)
 df.flow.est.clp <- df.flow.est[as.Date(df.flow.est$date) <= dt.max.p, ]
+
+# use max precip between the two gages (src) for daily precip
+names(df.daily.precip)
+junk <- summaryBy(prec.sum ~ date_org, df.daily.precip,FUN=max)
 df.daily.precip <- data.frame(df.daily.precip,
                               p=apply(df.daily.precip[, c("prec11","prec31")],
                                       MARGIN=1, FUN=max))

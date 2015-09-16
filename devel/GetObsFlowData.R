@@ -6,7 +6,7 @@
 ## http://apps.wrd.state.or.us/apps/sw/hydro_near_real_time/display_hydro_graph.aspx?station_nbr=14306030
 
 # check environment for existing data to keep
-if(length(ls()) > 0) tmp.hold <- paste0("(",ls(),")",collapse="|")
+if(length(ls()) > 0) dont.del <- paste0("(",ls(all.names=TRUE),")",collapse="|")
 
 chr.flow.dir <- paste0(strsplit(getwd(),split="/R_projs",fixed=TRUE)[[1]][1],
                        "/data")
@@ -18,6 +18,5 @@ df.flow.obs <-cbind(df.flow.obs,date=strptime(df.flow.obs$record_date,format="%m
 
 
 # clean up
-if(1*exists("tmp.hold")==0) rm(list=ls()[-grep("df.flow.obs",ls())])
-if(1*exists("tmp.hold")==1) rm(list=ls()[-grep(paste0("(df.flow.obs)|",tmp.hold),ls())])
-
+if(1*exists("dont.del")==0) rm(list=ls()[-grep("df.flow.obs",ls(all.names=TRUE))])
+if(1*exists("dont.del")==1) rm(list=ls()[-grep(paste0("(df.flow.obs)|",dont.del),ls(all.names=TRUE))])
