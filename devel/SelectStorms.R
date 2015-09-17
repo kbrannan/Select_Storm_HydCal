@@ -8,23 +8,36 @@ spn <- 5 ## span of 5 days to find mins and maxs
 # the precip data period is shorter than the flow data, so I used the end of the 
 # precip data to clip (shorten) the estimated flow data
 dt.max.p <- max(df.daily.precip$date)
-df.flow.est.clp <- df.flow.est[as.Date(df.flow.est$date) <= dt.max.p, ]
+df.flow.est.clp <- df.flow.est[df.flow.est$date <= dt.max.p, ]
 
 # use max precip between the two gages (src) for daily precip
-names(df.daily.precip)
-junk <- summaryBy(prec.sum ~ date_org, df.daily.precip,FUN=max)
-df.daily.precip <- data.frame(df.daily.precip,
-                              p=apply(df.daily.precip[, c("prec11","prec31")],
-                                      MARGIN=1, FUN=max))
+df.daily.precip.max.stations <- summaryBy(prec.sum ~ date_org, df.daily.precip,FUN=max)
 
 ## get boundaries of potential storms, see function for rules to get boudaries
-lst.pot.strm <- getPotentialStormData(spn=spn, dates=df.est.clp$date,
-                                      flow=df.est.clp$mean_daily_flow_cfs)
+lst.pot.strm <- getPotentialStormData(spn=spn, dates=df.flow.est.clp$date,
+                                      flow=df.flow.est.clp$mean_daily_flow_cfs)
+
+
+
+
 
 ## get plots of the potential storms
-plotToFile(as.numeric(unique(format(df.est.clp$date, format="%Y"))),
-           lst.pot.strm, df.est.clp, df.daily.precip, 
-           paste0(getwd(),"/figures/strmPlots.pdf")
+plotToFile(as.numeric(unique(format(df.flow.est.clp$date,format="%Y"))),
+           lst.pot.strm, df.flow.est.clp$date, df.flow.est.clp$mean_daily_flow, 
+           df.daily.precip.max.stations[ , 2], 
+           paste0(getwd(),"/figures/strmPlots.pdf"))
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## get storm summary table
 df.strm.sum <- table.me(yr.b=NULL, z=lst.pot.strm)
@@ -35,8 +48,15 @@ df.strm.sum.5 <- lst.pot.strm$pot.strm[df.strm.sum$length.days >= 5, ]
 lst.pot.strm.5$pot.strm <- lst.pot.strm$pot.strm[lst.pot.strm$pot.strm$strm.num 
                                                  %in% df.strm.sum.5$strm.num, ]
 plotToFile(as.numeric(unique(format(df.est.clp$date,format="%Y"))),
+           lst.pot.strm.5,df.est.clp$date, df.est.clp$flow, 
+           df.daily.precip.max.stations[ , 2], 
+           paste0(getwd(), "/figures/strmPlots5day.pdf"))
+
+plotToFile(as.numeric(unique(format(df.est.clp$date,format="%Y"))),
            lst.pot.strm.5,df.est.clp, df.daily.precip, 
            paste0(getwd(), "/figures/strmPlots5day.pdf"))
+
+
 
 ## check for multuiple peaks with storms and exclude sorms with multiple peaks 
 countPeak <- function(flow) sum(peaks(flow, span=3)*1)
