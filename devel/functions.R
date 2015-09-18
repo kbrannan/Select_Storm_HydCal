@@ -4,7 +4,7 @@ getPotentialStormData <- function(spn, dates, flow) {
 
   require(smwrBase)
   
-  df.tmp <- data.frame(dates=as.Date(dates), flow=flow)
+  df.tmp <- data.frame(dates=as.POSIXct(dates), flow=flow)
   
   df.peaks <- df.tmp[peaks(df.tmp$flow, span=spn) == TRUE,]
   df.rises <- df.tmp[peaks(-1*df.tmp$flow, span=spn) == TRUE,]
@@ -38,8 +38,8 @@ getStormPolys <- function(df.flow, df.rises, df.rises.sel) {
 
 getStormFlows <- function(lng.strm, df.flow, df.pot.strm.bnds) {
 
-  tmp.1 <- df.flow[as.Date(df.flow$date) >= df.pot.strm.bnds$date.bgn[lng.strm] 
-                   & as.Date(df.flow$date) <= 
+  tmp.1 <- df.flow[as.POSIXct(df.flow$date) >= df.pot.strm.bnds$date.bgn[lng.strm] 
+                   & as.POSIXct(df.flow$date) <= 
                      df.pot.strm.bnds$date.end[lng.strm], ]
 
   tmp.2 <- tmp.1[tmp.1$flow >= df.pot.strm.bnds$flow.bgn[lng.strm], ]
@@ -54,7 +54,7 @@ getStormFlows <- function(lng.strm, df.flow, df.pot.strm.bnds) {
 
   tmp.strm <- tmp.1[tmp.1$date <= tmp.date.end,]
 
-  df.storm <- data.frame(date=as.Date(tmp.strm$date), flow=tmp.strm$flow, 
+  df.storm <- data.frame(date=as.POSIXct(tmp.strm$date), flow=tmp.strm$flow, 
                          strm.num=lng.strm)
 
   return(df.storm)  
@@ -104,8 +104,6 @@ plotToFile <- function(y.b=NULL, lst.pot.strm=lst.pot.strm, df.dates=df.dates,
     
     df.yr.xlims <- c(dt.b, dt.e)
     
-    str(tmp.peaks$date)
-    
     df.peak <- tmp.peaks[tmp.peaks$date >= dt.b & tmp.peaks$date <= dt.e, ]
     
     df.rise <- tmp.rises[tmp.rises$date >= dt.b & tmp.rises$date <= dt.e, ]
@@ -127,12 +125,8 @@ plotToFile <- function(y.b=NULL, lst.pot.strm=lst.pot.strm, df.dates=df.dates,
     
     grid(nx=30, ny=NULL)
     
-#    plot(x=df.yr$date, y=df.yr$flow, type="l", log="y", lty="blank",
-#         xlim=df.yr.xlims, ylim=df.yr.ylims)
-
-plot(x=df.yr$date, y=df.yr$flow, type="l", log="y", lty="blank",
-     xlim=df.yr.xlims)
-
+    plot(x=df.yr$date, y=df.yr$flow, type="l", log="y", lty="blank",
+         xlim=df.yr.xlims, ylim=df.yr.ylims)
     
     for(ii in as.numeric(unique(df.pot.strms$strm.num))) 
       polygon(x=df.pot.strms[df.pot.strms$strm.num == ii, "date"], 
@@ -146,6 +140,110 @@ plot(x=df.yr$date, y=df.yr$flow, type="l", log="y", lty="blank",
     points(x=df.peak$date, y=df.peak$flow)
     
     grid(nx=30, ny=NULL)    
+  }
+  dev.off()
+}
+
+table.me <- function(yr.b, z) {
+  
+  require(doBy)
+  
+  y<-z$pot.strm
+  
+  if(is.null(yr.b) != TRUE) {
+    
+    dt.b <- as.POSIXct(paste0(yr.b, "/10/01"))
+    
+    dt.e <- as.POSIXct(paste0(as.numeric(format(dt.b, "%Y")) + 1, "/09/30"))
+    x <- y[y$date >= dt.b & y$date <= dt.e, ]
+  } else x <- y
+  df.table <- data.frame(strm.num=summaryBy(strm.num ~ 
+                                              strm.num,x,FUN=max)[ , 2], 
+                         date.bgn=x[firstobs(~strm.num,x), "date"], 
+                         date.end=x[lastobs(~strm.num,x), "date"])
+  df.table <- data.frame(df.table,
+                         length.days=as.numeric(df.table$date.end-
+                                                  df.table$date.bgn))
+  df.table <- data.frame(df.table,
+                         peak=summaryBy(flow ~ strm.num,x, FUN=max)[ , 2],
+                         sum.cuft=summaryBy(flow ~ strm.num, x, FUN=sum)[ , 2]*
+                           (3600*24)*df.table$length.days)
+  return(df.table)
+}
+
+countPeak <- function(flow) {
+  sum(peaks(flow, span=3)*1)
+}
+
+
+dtpeak <- function(x.date, x.val) {
+  
+  x.date[x.val == max(x.val)]
+}
+
+plotIndvToFile <- function(tmp.lst.pot.strm=lst.pot.strm, df.dates=df.dates,
+                           df.flow=df.flow, df.precip=df.precip,
+                           out.file="strmInvdPlots.pdf") {
+  
+  df.tmp <- data.frame(dates=df.dates, flow=df.flow)
+  
+  df.p <- data.frame(date=df.dates, p=df.precip)
+  
+  tmp.peaks <- tmp.lst.pot.strm$peaks
+  
+  tmp.rises <- tmp.lst.pot.strm$rises
+  
+  tmp.rises.sel <- tmp.lst.pot.strm$rises.sel
+  
+  tmp.pot.strms <- tmp.lst.pot.strm$pot.strm
+  
+  strm.nums <- as.numeric(unique(as.character(tmp.pot.strms$strm.num)))
+  
+  pdf(file=out.file, width=11, height=8.5, onefile=TRUE)
+  
+  for(ii in 1:(length(strm.nums))) {
+    
+    x <- tmp.pot.strms[tmp.pot.strms$strm.num == strm.nums[ii], ]
+    
+    tmp.ylims <- c(10^(floor(log10(min(x$flow))-1)), 
+                   10^(ceiling(log10(max(x$flow))+1)))
+    
+    tmp.xlims <- c(min(x$date)-1, max(x$date)+1)
+    
+    tmp.p <- df.p[df.p$date >= tmp.xlims[1] & df.p$date <= tmp.xlims[2], ]
+    
+    tmp.f <- df.tmp[df.tmp$date >= tmp.xlims[1] & 
+                      df.tmp$date <= tmp.xlims[2], ]
+    
+    par(mfrow=c(2, 1), tck=0.01,  mar=c(0, 1, 0, 0.5),oma=c(7, 5, 7, 2))
+    
+    layout(matrix(c(1, 1, 2, 2), 2, 2, byrow = TRUE), heights=c(1, 3), 
+           widths=c(1, 1))
+    
+    plot(x=tmp.p$date, y=tmp.p$p, xlab="",pch="", xlim=tmp.xlims,
+         ylim=c(0, max(c(tmp.p$p, 0.1))), xaxt="n")
+    
+    title(xlab="", ylab="", main=paste0("storm num ", strm.nums[ii]), 
+          outer=TRUE, line=3)
+    
+    lines(x=tmp.p$date, y=tmp.p$p, type="h")
+    
+    grid(nx=30, ny=NULL)
+    
+    plot(x=tmp.f$date, y=tmp.f$flow, type="l", log="y", lty="blank",
+         xlim=tmp.xlims, ylim=tmp.ylims, xaxt="n")
+    
+    polygon(x=x$date, y=x$flow, col="yellow", lty="blank")
+    
+    lines(x=tmp.f$date, y=tmp.f$flow, type="l", col="blue")
+    
+    points(x=tmp.rises$date, y=tmp.rises$flow)
+    
+    points(x=tmp.peaks$date, y=tmp.peaks$flow)
+    
+    grid(nx=30, ny=NULL)
+    
+    axis.Date(side=1, x=tmp.f$date, format="%m-%d-%Y")
   }
   dev.off()
 }
