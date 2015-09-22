@@ -7,7 +7,7 @@ get_potential_storm_data <- function(spn, dates, flow) {
 # help identify storm characteristcis. identified the changes in the slope using
 # "peaks" function in the smwrBase package and use local function 
 # "get_storm_segments"
-# input
+# input:
 # spn -  span is the number of days used to calculate change in slopes, min is 
 #        3 and max not limited. larger the span the more smoothing occurs and 
 #        could miss some storms. smaller span increases sensitivity but also
@@ -16,7 +16,7 @@ get_potential_storm_data <- function(spn, dates, flow) {
 # date - vector of POSIXct dates that correspond to flow values
 # flow - vector of numeric flow values in cfs
 #
-# output
+# output:
 # lst.pot.strm - list of data.frames of dates and flows for storm info 
 #    concave  - identified as negative change in slope
 #    convex   - identified as positive change in slope
@@ -55,7 +55,7 @@ get_potential_storm_data <- function(spn, dates, flow) {
   return(lst.pot.strm)
 }
 
-get_storm_segments <- function(dates, flow, df.convex, df.rises) {
+get_storm_segments <- function(dates, flows, convex, rises) {
   # identify storm segements from convex inflections in flow time-series and a 
   # subset of the convex inflections identified as rises in flow.The main point
   # of the function is to identify the end of a storm segment using the 
@@ -63,50 +63,72 @@ get_storm_segments <- function(dates, flow, df.convex, df.rises) {
   # for the storm segment. The "get_potential_storm_data" function calls this 
   # function and provides input
   #
-  # input
+  # input:
   # date - vector of POSIXct dates that correspond to flow values
-  # df.flow - data.frame of numeric flow values in cfs
+  # flows - vector of numeric flow values in cfs
+  # convex   - identified as positive change in slope
+  # rises    - identfied as the start of the storm hydrograph from convex
   #
-  # output
-  # lst.pot.strm - list of data.frames of dates and flows for storm info 
-  #    concave  - identified as negative change in slope
-  #    convex   - identified as positive change in slope
-  #    rises    - identfied as the start of the storm hydrograph from convex
-  #    pot.strm - flow segments of potential storms. storms assigned number as a
-  #               facotr to facilitate summary anaysis and further processing
+  # output:
+  # pot.strms - data.frame of strom segements with the elements
+  #     date     - date of flow in strom segment
+  #     flow     - flow in strom segment
+  #     strm.num - storm identifier as factor from a sequence 1 to length 
+  #                of rises
   #
   # created by Kevin Brannan 2015-09-22
   # 
   
-  df.ends <- sapply(df.rises$date, get_next_rise, df.convex)
+  # find the next rise for each of the ones in rises. these are the potential 
+  # ends of the storm segments. use "get_next_rise" function
+  df.ends <- sapply(rises$date, get_next_rise, convex)
 
-  df.pot.strm.bnds <- data.frame(date.bgn = df.rises$date,
+  # set up the data.frame for the boundaires of the storm segements
+  df.pot.strm.bnds <- data.frame(date.bgn = rises$date,
                                  date.end = do.call("c",df.ends[1,]),
-                                 flow.bgn = df.rises$flow)
+                                 flow.bgn = rises$flow)
 
-  df.pot.storms <- do.call(rbind, 
+  # get storm segments using "get_storm_flows" function
+  pot.strms <- do.call(rbind, 
                            lapply(seq(1:(length(df.pot.strm.bnds[, 1])-1)),
                                   get_storm_flows,
-                                  df.flow, df.pot.strm.bnds))
+                                  dates, flows, df.pot.strm.bnds))
 
-  df.pot.storms$strm.num <- factor(df.pot.storms$strm.num)
+  # make strm.num a factor
+  pot.strms$strm.num <- factor(pot.strms$strm.num)
 
-  return(df.pot.storms)
+  # return output
+  return(pot.strms)
 }
 
-get_next_rise <- function(dt.sel, df.rises) {
+get_next_rise <- function(cur.date, rises) {
+  # return the next rise for the current one from a data.frame of rises in flow.
+  # The "get_storm_segments" function calls this function and provides input
+  #
+  # input:
+  # cur.date - POSIXct date of current rise
+  # rises    - identfied as the start of the storm hydrograph from convex
+  #
+  # output:
+  # nest.rise - data.frame of date and flow of the next rise
+  #
+  # created by Kevin Brannan 2015-09-22
+  # 
   
-  df.next <- df.rises[(df.rises$date - dt.sel) > 1,][1, ]
+  # subtract the dates and select the next rise more than one day after 
+  # the current one
+  next.rise <- rises[(rises$date - cur.date) > 1, ][1, ]
   
-  return(df.next)
+  # return output
+  return(next.rise)
 }
 
-get_storm_flows <- function(lng.strm, df.dates, df.flow, df.pot.strm.bnds) {
+get_storm_flows <- function(lng.strm, dates, flows, df.pot.strm.bnds) {
 
-  tmp.1 <- df.flow[as.POSIXct(df.flow$date) >= 
-                     df.pot.strm.bnds$date.bgn[lng.strm] 
-                   & as.POSIXct(df.flow$date) <= 
-                     df.pot.strm.bnds$date.end[lng.strm], ]
+  tmp.0 <- data.frame(date = dates, flow = flows)
+  
+  tmp.1 <- tmp.0[tmp.0$date >= df.pot.strm.bnds$date.bgn[lng.strm] & 
+                 tmp.0$date <= df.pot.strm.bnds$date.end[lng.strm], ]
 
   tmp.2 <- tmp.1[tmp.1$flow >= df.pot.strm.bnds$flow.bgn[lng.strm], ]
 
@@ -120,7 +142,7 @@ get_storm_flows <- function(lng.strm, df.dates, df.flow, df.pot.strm.bnds) {
 
   tmp.strm <- tmp.1[tmp.1$date <= tmp.date.end, ]
 
-  df.storm <- data.frame(date=as.POSIXct(tmp.strm$date), flow=tmp.strm$flow, 
+  df.storm <- data.frame(date=tmp.strm$date, flow=tmp.strm$flow, 
                          strm.num=lng.strm)
 
   return(df.storm)  
