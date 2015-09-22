@@ -1,30 +1,88 @@
 # using http://adv-r.had.co.nz/Style.html for style guide
 
 get_potential_storm_data <- function(spn, dates, flow) {
+# identify storms by finding changes in sign of the slope of flow time-series. 
+# the positive (rise or end recession) and negative (peak) changes in slopes 
+# are found and the dates of the these chnages set the boudaries of the storm
+# help identify storm characteristcis. identified the changes in the slope using
+# "peaks" function in the smwrBase package and use local function 
+# "get_storm_segments"
+# input
+# spn -  span is the number of days used to calculate change in slopes, min is 
+#        3 and max not limited. larger the span the more smoothing occurs and 
+#        could miss some storms. smaller span increases sensitivity but also
+#        increases identification of non-storm fluctuations. 5-days safe value
+#        and use additional criteria outside this function
+# date - vector of POSIXct dates that correspond to flow values
+# flow - vector of numeric flow values in cfs
+#
+# output
+# lst.pot.strm - list of data.frames of dates and flows for storm info 
+#    concave  - identified as negative change in slope
+#    convex   - identified as positive change in slope
+#    rises    - identfied as the start of the storm hydrograph from convex
+#    pot.strm - flow segments of potential storms. storms assigned number as a
+#               facotr to facilitate summary anaysis and further processing
+#
+# created by Kevin Brannan 2015-09-22
+# 
 
+  # load libraries
   require(smwrBase)
   
+  # create local data.frame of date and flow for processing
   df.tmp <- data.frame(dates = as.POSIXct(dates), flow = flow)
-  
-  df.peaks <- df.tmp[peaks(df.tmp$flow, span = spn) == TRUE, ]
-  df.rises <- df.tmp[peaks(-1 * df.tmp$flow, span = spn) == TRUE, ]
-  
-  tmp.diff <- diff(df.rises$flow, lag = 1)
-  df.rises.sel <- df.rises[tmp.diff <= 0, ]
-  
-  df.pot.strms <- get_storm_polys(df.tmp, df.rises, df.rises.sel)
 
-  lst.pot.strm <- list(peaks = df.peaks, rises = df.rises, 
-                       rises.sel = df.rises.sel,pot.strm = df.pot.strms)
+  # find the potential rises and peaks using smwrBase::peaks
+  df.concave <- df.tmp[peaks(df.tmp$flow, span = spn) == TRUE, ]
+  df.convex  <- df.tmp[peaks(-1 * df.tmp$flow, span = spn) == TRUE, ]
+
+  # identify the rises from convex by the sign of the inflextion using 
+  # difference between the convex flow and the imdiately proceeding flow. 
+  # negative or zero identifies rising hydrograph
+  tmp.diff <- diff(df.convex$flow, lag = 1)
+  df.rises <- df.convex[tmp.diff <= 0, ]
+
+  # get potential storm segments using "get_storm_segments" function
+  df.pot.strms <- get_storm_segments(df.tmp, df.convex, df.rises)
+
+  # assemble output list from concave, convex, rises and potential storm
+  # data.frames
+  lst.pot.strm <- list(concave = df.concave, convex = df.convex, 
+                       rises = df.rises, pot.strm = df.pot.strms)
+  
+  # return output
+  return(lst.pot.strm)
 }
 
-get_storm_polys <- function(df.flow, df.rises, df.rises.sel) {
+get_storm_segments <- function(dates, flow, df.convex, df.rises) {
+  # identify storm segements from convex inflections in flow time-series and a 
+  # subset of the convex inflections identified as rises in flow.The main point
+  # of the function is to identify the end of a storm segment using the 
+  # "get_next_rise" function. The "get_storm_flows" function extracts the flow
+  # for the storm segment. The "get_potential_storm_data" function calls this 
+  # function and provides input
+  #
+  # input
+  # date - vector of POSIXct dates that correspond to flow values
+  # df.flow - data.frame of numeric flow values in cfs
+  #
+  # output
+  # lst.pot.strm - list of data.frames of dates and flows for storm info 
+  #    concave  - identified as negative change in slope
+  #    convex   - identified as positive change in slope
+  #    rises    - identfied as the start of the storm hydrograph from convex
+  #    pot.strm - flow segments of potential storms. storms assigned number as a
+  #               facotr to facilitate summary anaysis and further processing
+  #
+  # created by Kevin Brannan 2015-09-22
+  # 
   
-  df.ends <- sapply(df.rises.sel$date, get_next_rise, df.rises)
+  df.ends <- sapply(df.rises$date, get_next_rise, df.convex)
 
-  df.pot.strm.bnds <- data.frame(date.bgn = df.rises.sel$date,
+  df.pot.strm.bnds <- data.frame(date.bgn = df.rises$date,
                                  date.end = do.call("c",df.ends[1,]),
-                                 flow.bgn = df.rises.sel$flow)
+                                 flow.bgn = df.rises$flow)
 
   df.pot.storms <- do.call(rbind, 
                            lapply(seq(1:(length(df.pot.strm.bnds[, 1])-1)),
@@ -43,7 +101,7 @@ get_next_rise <- function(dt.sel, df.rises) {
   return(df.next)
 }
 
-get_storm_flows <- function(lng.strm, df.flow, df.pot.strm.bnds) {
+get_storm_flows <- function(lng.strm, df.dates, df.flow, df.pot.strm.bnds) {
 
   tmp.1 <- df.flow[as.POSIXct(df.flow$date) >= 
                      df.pot.strm.bnds$date.bgn[lng.strm] 
