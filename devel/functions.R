@@ -83,7 +83,7 @@ get_storm_segments <- function(dates, flows, convex, rises) {
   # ends of the storm segments. use "get_next_rise" function
   df.ends <- sapply(rises$date, get_next_rise, convex)
 
-  # set up the data.frame for the boundaires of the storm segements
+  # data.frame of the boundaires of the storm segements
   df.pot.strm.bnds <- data.frame(date.bgn = rises$date,
                                  date.end = do.call("c",df.ends[1,]),
                                  flow.bgn = rises$flow)
@@ -110,7 +110,7 @@ get_next_rise <- function(cur.date, rises) {
   # rises    - identfied as the start of the storm hydrograph from convex
   #
   # output:
-  # nest.rise - data.frame of date and flow of the next rise
+  # next.rise - data.frame of date and flow of the next rise
   #
   # created by Kevin Brannan 2015-09-22
   # 
@@ -123,28 +123,61 @@ get_next_rise <- function(cur.date, rises) {
   return(next.rise)
 }
 
-get_storm_flows <- function(lng.strm, dates, flows, df.pot.strm.bnds) {
+get_storm_flows <- function(lng.strm, dates, flows, strm.bnds) {
+  # get dates and flows given a the begin and end of a storm segment
+  # The "get_potential_storm_data" function calls this function and 
+  # provides input
+  #
+  # input:
+  # lng.strm - storm identifier as integer
+  # dates    - vector of POSIXct dates that correspond to flow values
+  # flows    - vector of numeric flow values in cfs
+  # strm.bnds - data frame containing stomr boundary information with elements
+  #     date.bgn - begining date of storm segment
+  #     date.end - ending date of storm segment
+  #     flow.bgn - flow at begining of storm segment
+  #
+  # output:
+  # storm - data.frame for storm segements with the elements
+  #     date     - date of flow in storm segment
+  #     flow     - flow in strom segment
+  #     strm.num - storm identifier as integer
+  #
+  # created by Kevin Brannan 2015-09-22
+  # 
 
+  # create temporary data.frame for local use
   tmp.0 <- data.frame(date = dates, flow = flows)
-  
-  tmp.1 <- tmp.0[tmp.0$date >= df.pot.strm.bnds$date.bgn[lng.strm] & 
-                 tmp.0$date <= df.pot.strm.bnds$date.end[lng.strm], ]
 
-  tmp.2 <- tmp.1[tmp.1$flow >= df.pot.strm.bnds$flow.bgn[lng.strm], ]
+  # subset dates and flows within begin and end of storm segment dates
+  tmp.1 <- tmp.0[tmp.0$date >= strm.bnds$date.bgn[lng.strm] & 
+                 tmp.0$date <= strm.bnds$date.end[lng.strm], ]
 
+  # get flows in storm segment above the flow at start of storm
+  tmp.2 <- tmp.1[tmp.1$flow >= strm.bnds$flow.bgn[lng.strm], ]
+
+  # use row numbers (row.names) to get the row date-flow data of the begning of 
+  # the storm segment
   rw.max <- max(as.numeric(row.names(tmp.1)))
 
+  # use row numbers (row.names) to get the row date-flow data of the end of 
+  # the storm segment
   rw.flow.end <- max(as.numeric(row.names(tmp.2))) + 1
 
+  # end storm segment once the flows are at or below the flow at start of storm
   if (rw.flow.end > rw.max) rw.flow.end <- rw.max
 
+  # set end storm segement at date of flow at or below flow of start of storm
   tmp.date.end <- tmp.1$date[grep(as.character(rw.flow.end), row.names(tmp.1))]
 
+  # sub-set storm segment for date of flow at or below fow at start of storm
   tmp.strm <- tmp.1[tmp.1$date <= tmp.date.end, ]
 
-  df.storm <- data.frame(date=tmp.strm$date, flow=tmp.strm$flow, 
+  # create storm segement output data.frame
+  storm <- data.frame(date=tmp.strm$date, flow=tmp.strm$flow, 
                          strm.num=lng.strm)
 
+  # return output
   return(df.storm)  
 }
 
