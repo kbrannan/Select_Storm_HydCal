@@ -181,11 +181,51 @@ get_storm_flows <- function(lng.strm, dates, flows, strm.bnds) {
   return(df.storm)  
 }
 
+storm_count_peaks <- function(flows) {
+  # count the number of peaks in a flow segment. the segment neeads at 3 points
+  #
+  # input:
+  # flows - vector of numeric flow values in cfs
+  #
+  # output:
+  # count.peaks - number of peaks in the flow segment
+  #
+  # identified the changes in the slope using "peaks" function in the 
+  # smwrBase package
+  #
+  # created by Kevin Brannan 2015-09-22
+  
+  # load libraries
+  require(smwrBase)
+  
+  # find peaks using smwrBase::peaks
+  count.peaks <- sum(peaks(flow, span = 3) * 1)
+  
+  # return output
+  return(count.peaks)
+  
+}
 
 storms_plot_to_file <- function(y.b = NULL, lst.pot.strm = lst.pot.strm, 
                                 df.dates = df.dates, df.flow = df.flow, 
                                 df.precip = df.precip, 
                                 out.file = "strmPlots.pdf") {
+
+  # plot flow and precip times series with storm hydrographs highlighted and 
+  # send figure to pdf file
+  # input:
+  # y.b - first year to plot as integer
+  # date - vector of POSIXct dates that correspond to flow values
+  # flow - vector of numeric flow values in cfs
+  #
+  # output:
+  # lst.pot.strm - list of data.frames of dates and flows for storm info 
+  #    concave  - identified as negative change in slope
+  #    convex   - identified as positive change in slope
+  #    rises    - identfied as the start of the storm hydrograph from convex
+  #    pot.strm - flow segments of potential storms. storms assigned number as a
+  #               facotr to facilitate summary anaysis and further processing  
+
 
   df.tmp <- data.frame(dates = df.dates, flow = df.flow)
 
@@ -262,46 +302,6 @@ storms_plot_to_file <- function(y.b = NULL, lst.pot.strm = lst.pot.strm,
   dev.off()
 }
 
-storms_to_table <- function(yr.b, z) {
-  
-  require(doBy)
-  
-  y <- z$pot.strm
-  
-  if(is.null(yr.b) != TRUE) {
-    
-    dt.b <- as.POSIXct(paste0(yr.b, "/10/01"))
-    
-    dt.e <- as.POSIXct(paste0(as.numeric(format(dt.b, "%Y")) + 1, "/09/30"))
-    x <- y[y$date >= dt.b & y$date <= dt.e, ]
-  } else x <- y
-  df.table <- data.frame(strm.num = summaryBy(strm.num ~ 
-                                              strm.num,x,FUN=max)[ , 2], 
-                         date.bgn = x[firstobs(~strm.num, x), "date"], 
-                         date.end = x[lastobs(~strm.num,  x), "date"])
-  df.table <- data.frame(df.table,
-                         length.days = as.numeric(df.table$date.end - 
-                                                  df.table$date.bgn))
-  df.table <- data.frame(df.table,
-                         peak = summaryBy(flow ~ strm.num, x, FUN = max)[ , 2],
-                         sum.cuft=summaryBy(flow ~ strm.num, x, 
-                                            FUN = sum)[ , 2] * 
-                           (3600 * 24) * df.table$length.days)
-  return(df.table)
-}
-
-storm_count_peaks <- function(flow) {
-  
-  sum(peaks(flow, span = 3) * 1)
-  
-}
-
-get_storm_peak_date <- function(x.date, x.val) {
-  
-  x.date[x.val == max(x.val)]
-  
-}
-
 storm_plot_indiviudal_to_file <- function(tmp.lst.pot.strm = lst.pot.strm, 
                                           df.dates  = df.dates,
                                           df.flow   = df.flow, 
@@ -370,4 +370,39 @@ storm_plot_indiviudal_to_file <- function(tmp.lst.pot.strm = lst.pot.strm,
     axis.Date(side = 1, x = tmp.f$date, format = "%m-%d-%Y")
   }
   dev.off()
+}
+
+
+storms_to_table <- function(yr.b, z) {
+  
+  require(doBy)
+  
+  y <- z$pot.strm
+  
+  if(is.null(yr.b) != TRUE) {
+    
+    dt.b <- as.POSIXct(paste0(yr.b, "/10/01"))
+    
+    dt.e <- as.POSIXct(paste0(as.numeric(format(dt.b, "%Y")) + 1, "/09/30"))
+    x <- y[y$date >= dt.b & y$date <= dt.e, ]
+  } else x <- y
+  df.table <- data.frame(strm.num = summaryBy(strm.num ~ 
+                                                strm.num,x,FUN=max)[ , 2], 
+                         date.bgn = x[firstobs(~strm.num, x), "date"], 
+                         date.end = x[lastobs(~strm.num,  x), "date"])
+  df.table <- data.frame(df.table,
+                         length.days = as.numeric(df.table$date.end - 
+                                                    df.table$date.bgn))
+  df.table <- data.frame(df.table,
+                         peak = summaryBy(flow ~ strm.num, x, FUN = max)[ , 2],
+                         sum.cuft=summaryBy(flow ~ strm.num, x, 
+                                            FUN = sum)[ , 2] * 
+                           (3600 * 24) * df.table$length.days)
+  return(df.table)
+}
+
+get_storm_peak_date <- function(x.date, x.val) {
+  
+  x.date[x.val == max(x.val)]
+  
 }
