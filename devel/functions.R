@@ -206,203 +206,288 @@ storm_count_peaks <- function(flows) {
   
 }
 
-storms_plot_to_file <- function(y.b = NULL, lst.pot.strm = lst.pot.strm, 
-                                df.dates = df.dates, df.flow = df.flow, 
+storms_plot_to_file <- function(y.b = NULL, pot.strm = pot.strm, 
+                                dates = dates, flow = flow, 
                                 df.precip = df.precip, 
                                 out.file = "strmPlots.pdf") {
 
-  # plot flow and precip times series with storm hydrographs highlighted and 
-  # send figure to pdf file
+  # plot flow and precip times series with storm hydrographs highlighted for 
+  # for each year of data period and send figure to pdf file
   # input:
-  # y.b - first year to plot as integer
-  # date - vector of POSIXct dates that correspond to flow values
-  # flow - vector of numeric flow values in cfs
+  #      y.b - vector of numeric years to plot
+  # pot.strm - list of data.frames of dates and flows for storm info
+  #    dates - vector of POSIXct dates that correspond to flow values
+  #     flow - vector of numeric flow values in cfs
+  #   precip - vector of numeric precip values in inches
+  # out.file - string for pdf filename (and path) where figure is sent
   #
   # output:
-  # lst.pot.strm - list of data.frames of dates and flows for storm info 
-  #    concave  - identified as negative change in slope
-  #    convex   - identified as positive change in slope
-  #    rises    - identfied as the start of the storm hydrograph from convex
-  #    pot.strm - flow segments of potential storms. storms assigned number as a
-  #               facotr to facilitate summary anaysis and further processing  
+  # No output in R environment. Figure is sent to pdf file at location sepcified
+  # in out.file vairable
 
+  # creating temporary data sets for flow and precip
+  df.f <- data.frame(date = dates, flow = flow)
+  df.p <- data.frame(date = dates, p = precip)
 
-  df.tmp <- data.frame(dates = df.dates, flow = df.flow)
-
-  df.p <- data.frame(date = df.dates, p = df.precip)
-
-  tmp.peaks <- lst.pot.strm$peaks
-  tmp.peaks$dates <- as.POSIXct(lst.pot.strm$peaks$dates)
+  # creating temporary data sets for storm list data set
+  tmp.peaks <- pot.strm$peaks
+  tmp.peaks$dates <- pot.strm$peaks$dates
+  tmp.rises <- pot.strm$rises
+  tmp.rises$dates <- pot.strm$rises$dates
+  tmp.rises.sel <- pot.strm$rises.sel
+  tmp.rises.sel$dates <- pot.strm$rises.sel$dates
+  tmp.pot.strms <- pot.strm$pot.strm
+  tmp.pot.strms$date <- pot.strm$pot.strm$date
   
-  tmp.rises <- lst.pot.strm$rises
-  tmp.rises$dates <- as.POSIXct(lst.pot.strm$rises$dates)
-  
-  tmp.rises.sel <- lst.pot.strm$rises.sel
-  tmp.rises.sel$dates <- as.POSIXct(lst.pot.strm$rises.sel$dates)
-  
-  tmp.pot.strms <- lst.pot.strm$pot.strm
-  tmp.pot.strms$date <- as.POSIXct(lst.pot.strm$pot.strm$date)
-  
+  # open pdf file for output
   pdf(file=out.file, width = 11, height = 8.5, onefile = TRUE)
-  
+
+  # loop to print a figure for each year in "y.b" to a signle page in "out.file"
   for (ii in 1:(length(y.b) -1 )) {
     
+  # use water year for period of plot
     dt.b <- as.POSIXct(paste0(y.b[ii], "/10/01"))
-    
     dt.e <- as.POSIXct(paste0(as.numeric(format(dt.b, "%Y")) + 1, "/09/30"))
-    
-    df.p.yr <- df.p[df.p$date >= dt.b & df.p$date <= dt.e & df.p$p > 0, ]
-    
-    df.yr <- df.tmp[df.tmp$date >= dt.b & df.tmp$date <= dt.e, ]
 
-    df.yr.ylims <- c(10 ^ (floor(log10(min(df.yr$flow)) - 1)),
-                     10 ^ (ceiling(log10(max(df.yr$flow)) + 1)))
+  # subset precip data for current year
+    df.p.yr <- df.p[df.p$date >= dt.b & df.p$date <= dt.e & df.p$p > 0, ]
+
+  # subset flow data for the current year
+    df.f.yr <- df.f[df.tmp$date >= dt.b & df.tmp$date <= dt.e, ]
+
+  # set y-limits for current year
+    df.yr.ylims <- c(10 ^ (floor(log10(min(df.f.yr$flow)) - 1)),
+                     10 ^ (ceiling(log10(max(df.f.yr$flow)) + 1)))
     
+  # set x-limits for current year
     df.yr.xlims <- c(dt.b, dt.e)
     
+  # subset storm peaks for current year
     df.peak <- tmp.peaks[tmp.peaks$date >= dt.b & tmp.peaks$date <= dt.e, ]
     
+  # subset storm rises for current year
     df.rise <- tmp.rises[tmp.rises$date >= dt.b & tmp.rises$date <= dt.e, ]
     
+  # subset storm flows for current year
     df.pot.strms <- tmp.pot.strms[tmp.pot.strms$date >= dt.b & 
                                   tmp.pot.strms$date <= dt.e, ]
     
+  # set plot area matrix for 2 rows and one column along with other pars
     par(mfrow = c(2,1), tck = 0.01,  mar = c(0,1,0,0.5),oma = c(7,5,7,2))
     
+  # vary height of plots. Make precip hight smaller than flow
     layout(matrix(c(1,1,2,2), 2, 2, byrow = TRUE), heights = c(1,3), 
            widths = c(1,1))
     
+  # precip plot set up, don't plot data
     plot(x = df.p.yr$date, y = df.p.yr$p, xlab = "",pch = "", 
          xlim = df.yr.xlims, xaxt = "n")
     
+  # title for plot is current year
     title(xlab  = "", ylab = "", main = paste0("for year ", y.b[ii]), 
           outer = TRUE, line = 3)
     
+  # plot vertical lines for each precip obs
     lines(x = df.p.yr$date, y = df.p.yr$p, type = "h")
     
+  # add grid lines in plot for dates
     grid(nx = 30, ny = NULL)
     
+  # set up plot for flow, don't plot data. Plot flow data after the storm
+  # polygons are plotted so flow lines are borders of polygons
     plot(x = df.yr$date, y = df.yr$flow, type = "l", log = "y", lty = "blank",
          xlim = df.yr.xlims, ylim = df.yr.ylims)
     
+  # plot each storm
     for (ii in as.numeric(unique(df.pot.strms$strm.num))) {
+    # storm flow as a filled in polygon
       polygon(x = df.pot.strms[df.pot.strms$strm.num == ii, "date"], 
               y = df.pot.strms[df.pot.strms$strm.num == ii, "flow"],
               col="yellow", lty="blank")
     }
     
+  # flow data for year plotted over storm polygon
     lines(x = df.yr$date, y = df.yr$flow, type = "l",col = "blue")
     
+  # points for rises ploted over storm polygon and flow data
     points(x = df.rise$date, y = df.rise$flow)
     
+  # points for peaks ploted over storm polygon and flow data
     points(x = df.peak$date, y = df.peak$flow)
     
+  # add grid lines in plot for dates
     grid(nx = 30, ny = NULL)    
   }
+  # close file done
   dev.off()
 }
 
-storm_plot_indiviudal_to_file <- function(tmp.lst.pot.strm = lst.pot.strm, 
-                                          df.dates  = df.dates,
-                                          df.flow   = df.flow, 
-                                          df.precip = df.precip,
+storm_plot_indiviudal_to_file <- function(pot.strm = pot.strm, 
+                                          dates  = dates,
+                                          flow   = flow, 
+                                          precip = precip,
                                           out.file  = "strmInvdPlots.pdf") {
+
+  # plot flow and precip times series with storm hydrographs highlighted for 
+  # each individula storm and send figure to pdf file
+  # input:
+  # pot.strm - list of data.frames of dates and flows for storm info
+  #    dates - vector of POSIXct dates that correspond to flow values
+  #     flow - vector of numeric flow values in cfs
+  #   precip - vector of numeric precip values in inches
+  # out.file - string for pdf filename (and path) where figure is sent
+  #
+  # output:
+  # No output in R environment. Figure is sent to pdf file at location sepcified
+  # in out.file vairable
   
-  df.tmp <- data.frame(dates = df.dates, flow = df.flow)
-  
+  # creating temporary data sets for flow and precip  
+  df.f <- data.frame(dates = df.dates, flow = df.flow)
   df.p <- data.frame(date = df.dates, p = df.precip)
-  
+
+  # creating temporary data sets for storm list data set
   tmp.peaks <- tmp.lst.pot.strm$peaks
-  
   tmp.rises <- tmp.lst.pot.strm$rises
-  
   tmp.rises.sel <- tmp.lst.pot.strm$rises.sel
-  
   tmp.pot.strms <- tmp.lst.pot.strm$pot.strm
-  
   strm.nums <- as.numeric(unique(as.character(tmp.pot.strms$strm.num)))
-  
+
+  # open pdf file for output
   pdf(file = out.file, width = 11, height = 8.5, onefile = TRUE)
   
+  # loop to print a figure for each storm to a signle page in "out.file"
   for(ii in 1:(length(strm.nums))) {
-    
+  # get info for storm ii
     x <- tmp.pot.strms[tmp.pot.strms$strm.num == strm.nums[ii], ]
-    
+
+  # set y-limits for current storm
     tmp.ylims <- c(10 ^ (floor(log10(min(x$flow))   - 1)), 
                    10 ^ (ceiling(log10(max(x$flow)) + 1)))
-    
+  
+  # set x-limits for current storm
     tmp.xlims <- c(min(x$date) - 1, max(x$date) + 1)
-    
+  
+  # subset precip and flow for current storm
     tmp.p <- df.p[df.p$date >= tmp.xlims[1] & df.p$date <= tmp.xlims[2], ]
-    
     tmp.f <- df.tmp[df.tmp$date >= tmp.xlims[1] & 
                       df.tmp$date <= tmp.xlims[2], ]
-    
+  
+  # set plot area matrix for 2 rows and one column along with other pars
     par(mfrow = c(2, 1), tck = 0.01,  mar = c(0, 1, 0, 0.5), 
         oma = c(7, 5, 7, 2))
-    
+  
+  # vary height of plots. Make precip hight smaller than flow
     layout(matrix(c(1, 1, 2, 2), 2, 2, byrow = TRUE), heights = c(1, 3), 
            widths = c(1, 1))
-    
+  
+  # precip plot set up, don't plot data
     plot(x = tmp.p$date, y = tmp.p$p, xlab = "",pch = "", xlim = tmp.xlims,
          ylim = c(0, max(c(tmp.p$p, 0.1))), xaxt = "n")
-    
+  
+  # title for plot is current sorm
     title(xlab = "", ylab = "", main = paste0("storm num ", strm.nums[ii]), 
           outer = TRUE, line = 3)
-    
+  
+  # plot vertical lines for each precip obs
     lines(x = tmp.p$date, y = tmp.p$p, type = "h")
-    
+  
+  # add grid lines in plot for dates
     grid(nx = 30, ny = NULL)
-    
+  
+  # set up plot for flow, don't plot data. Plot flow data after the storm
+  # polygons are plotted so flow lines are borders of polygons  
     plot(x = tmp.f$date, y = tmp.f$flow, type = "l", log = "y", lty = "blank",
          xlim = tmp.xlims, ylim = tmp.ylims, xaxt = "n")
     
+  # storm flow as a filled in polygon
     polygon(x = x$date, y = x$flow, col = "yellow", lty = "blank")
-    
+  
+  # flow data for year plotted over storm polygon
     lines(x = tmp.f$date, y = tmp.f$flow, type = "l", col = "blue")
-    
+  
+  # points for rises ploted over storm polygon and flow data
     points(x = tmp.rises$date, y = tmp.rises$flow)
-    
+  
+  # points for peaks ploted over storm polygon and flow data
     points(x = tmp.peaks$date, y = tmp.peaks$flow)
-    
+  
+  # add grid lines in plot for dates
     grid(nx = 30, ny = NULL)
-    
+  
+  # format x-axis on flow plot to include day, month and year
     axis.Date(side = 1, x = tmp.f$date, format = "%m-%d-%Y")
   }
+  
+  # close file done
   dev.off()
 }
 
 
-storms_to_table <- function(yr.b, z) {
+storms_to_table <- function(yr.b, pot.strm) {
+  # summarize storm data into a data frame
+  # input:
+  # y.b - single year to summarize 
+  #       (optional, if left out summary done for all the years)
+  # pot.strm - list of data.frames of dates and flows for storm info
+  # output:
+  # df.table - summary of the storms with columns
+  #         strm.num - number assigned to storm from get_potential_storm_data
+  #                    function
+  #      length.days - length of storm in days
+  #             peak - peak flow of storms in cfs
+  #         sum.cuft - flow volume of storm in cubic feet
   
+  # load package for SummaryBy function
   require(doBy)
   
-  y <- z$pot.strm
+  # create local temporary data frame fo storm flows
+  y <- pot.strm$pot.strm
   
+  # if done for single year
   if(is.null(yr.b) != TRUE) {
     
+  # start date for water year
     dt.b <- as.POSIXct(paste0(yr.b, "/10/01"))
-    
+  
+  # end date for water year
     dt.e <- as.POSIXct(paste0(as.numeric(format(dt.b, "%Y")) + 1, "/09/30"))
     x <- y[y$date >= dt.b & y$date <= dt.e, ]
-  } else x <- y
+  } else x <- y # do all years
+
+  # summarize storms
+  # get storm number
   df.table <- data.frame(strm.num = summaryBy(strm.num ~ 
                                                 strm.num,x,FUN=max)[ , 2], 
                          date.bgn = x[firstobs(~strm.num, x), "date"], 
                          date.end = x[lastobs(~strm.num,  x), "date"])
+  
+  # add length of storms in days
   df.table <- data.frame(df.table,
                          length.days = as.numeric(df.table$date.end - 
                                                     df.table$date.bgn))
+  
+  # add peak flow and flow volume for storms
   df.table <- data.frame(df.table,
                          peak = summaryBy(flow ~ strm.num, x, FUN = max)[ , 2],
                          sum.cuft=summaryBy(flow ~ strm.num, x, 
                                             FUN = sum)[ , 2] * 
                            (3600 * 24) * df.table$length.days)
+  # done retirn result
   return(df.table)
 }
 
-get_storm_peak_date <- function(x.date, x.val) {
+get_storm_peak_date <- function(dates, flow) {
+  # get date of storm peak
+  # input:
+  # dates - vector of POSIXct dates for storm
+  # flow - vector of numeric values for flows in cfs
+  # output:
+  # peak.date - POSIXct date of peak flow
   
-  x.date[x.val == max(x.val)]
+  # subset dates for row of maximum flow, which is the peak flow
+  peak.date <- dates[flow == max(flow)]
+  
+  # done return output
+  return(peak.date)
   
 }
