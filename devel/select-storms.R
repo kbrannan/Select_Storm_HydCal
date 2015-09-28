@@ -27,13 +27,17 @@ lst.pot.strm <- get_potential_storm_data(
   flow  = df.flow.est.clp$mean_daily_flow_cfs)
 
 # get plots of the potential storms
-storms_plot_to_file(as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
-           lst.pot.strm, df.flow.est.clp$date, df.flow.est.clp$mean_daily_flow, 
-           df.daily.precip.max.stations[ , 2], 
-           paste0(getwd(), "/figures/strmPlots.pdf"))
+
+storms_plot_to_file(
+       y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm, 
+     dates = df.flow.est.clp$date, 
+      flow = df.flow.est.clp$mean_daily_flow, 
+    precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), "/figures/strmPlots.pdf"))
 
 # get storm summary table
-df.strm.sum <- storms_to_table(yr.b = NULL, z = lst.pot.strm)
+df.strm.sum <- storms_to_table(yr.b = NULL, pot.strm = lst.pot.strm)
 
 # only use storms with duration greater than 5 days, this lower limit 
 # from HSPFEXP Guidence
@@ -43,10 +47,12 @@ lst.pot.strm.5$pot.strm <- lst.pot.strm$pot.strm[lst.pot.strm$pot.strm$strm.num
                                                  %in% df.strm.sum.5$strm.num, ]
 
 storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))), 
-  lst.pot.strm.5, df.flow.est.clp$date, df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlots5day.pdf"))
+       y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm.5, 
+     dates = df.flow.est.clp$date, 
+      flow = df.flow.est.clp$mean_daily_flow, 
+    precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), "/figures/strmPlots5day.pdf"))
 
 ## check for multuiple peaks with storms and exclude storms with multiple peaks 
 df.peak.counts <- summaryBy(flow ~ strm.num, data = lst.pot.strm.5$pot.strm, 
@@ -63,10 +69,12 @@ lst.pot.strm.5.single <- lst.pot.strm.5
 lst.pot.strm.5.single$pot.strm <- df.pot.strm.5.single
 
 storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))),
-  lst.pot.strm.5.single, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2],
-  paste0(getwd(), "/figures/strmPlots5daySingle.pdf"))
+       y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm.5.single, 
+     dates = df.flow.est.clp$date, 
+      flow = df.flow.est.clp$mean_daily_flow, 
+    precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), "/figures/strmPlots5daySingle.pdf"))
 
 # check environment for existing data to keep
 if (length(ls()) > 0) dont.del <- paste0("(",ls(all.names = TRUE),")", 
@@ -90,11 +98,21 @@ lst.pot.strm.5.single.gt0$pot.strm <-
     lst.pot.strm.5.single$pot.strm$strm.num) %in% 
       keep.strm.nums, ]
 
+# plot results
 storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))),
-  lst.pot.strm.5.single.gt0, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlots5daySinglegt0.pdf"))
+       y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm.5.single.gt0, 
+     dates = df.flow.est.clp$date, 
+      flow = df.flow.est.clp$mean_daily_flow, 
+    precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0.pdf"))
+
+storm_plot_indiviudal_to_file(
+  pot.strm = lst.pot.strm.5.single.gt0, 
+  dates = df.flow.est.clp$date, 
+  flow = df.flow.est.clp$mean_daily_flow, 
+  precip = df.daily.precip.max.stations[ , 2],
+  out.file = paste0(getwd(),"/figures/strmInvdPlots5singlegt0.pdf"))
 
 # clean up
 if(1*exists("dont.del") == 0) rm(list = ls()[-grep("lst.pot.strm.5.single.gt0",
@@ -103,17 +121,9 @@ if(1*exists("dont.del") == 1) rm(list = ls()[
   -grep(paste0("(lst.pot.strm.5.single.gt0)|",dont.del),ls(all.names = TRUE))])
 
 ## check max precip timing relative to peak flow
-storm_plot_indiviudal_to_file(
-  tmp.lst.pot.strm=lst.pot.strm.5.single.gt0, 
-  df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(),"/figures/strmInvdPlots5singlegt0.pdf"))
-
 # check environment for existing data to keep
 if(length(ls()) > 0) dont.del <- paste0("(",ls(all.names = TRUE),")", 
                                         collapse="|")
-
 df.pot.00 <- merge(x = lst.pot.strm.5.single.gt0$pot.strm, 
                    y = df.daily.precip.max.stations, by = "date")
 
@@ -147,19 +157,21 @@ lst.pot.strm.5.single.gt0.fafp <- lst.pot.strm.5.single.gt0
 
 lst.pot.strm.5.single.gt0.fafp$pot.strm <- df.pot.01
 
+# plot results
 storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))),
-  lst.pot.strm.5.single.gt0.fafp, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlots5daySinglegt0fafp.pdf"))
+  y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm.5.single.gt0.fafp, 
+  dates = df.flow.est.clp$date, 
+  flow = df.flow.est.clp$mean_daily_flow, 
+  precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0fafp.pdf"))
 
 storm_plot_indiviudal_to_file(
-  tmp.lst.pot.strm = lst.pot.strm.5.single.gt0.fafp, 
-  df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2],
+  pot.strm = lst.pot.strm.5.single.gt0.fafp, 
+  dates = df.flow.est.clp$date, 
+  flow = df.flow.est.clp$mean_daily_flow, 
+  precip = df.daily.precip.max.stations[ , 2],
   out.file = paste0(getwd(),"/figures/strmInvdPlots5singlegt0fafp.pdf"))
-
 
 ## keep storms with precip >= 0.1 inch
 df.pot.00 <- summaryBy(prec.sum.max ~ strm.num, 
@@ -173,19 +185,21 @@ lst.pot.strm.5.single.gt0.fafp.pgt01$pot.strm <- lst.pot.strm.5.single.gt0.fafp$
   pot.strm[lst.pot.strm.5.single.gt0.fafp$pot.strm$strm.num %in% 
              keep.strm.nums, ]
 
+# plot results
 storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))),
-  lst.pot.strm.5.single.gt0.fafp.pgt01, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlots5daySinglegt0fafppgt01.pdf"))
-
+  y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm.5.single.gt0.fafp.pgt01, 
+  dates = df.flow.est.clp$date, 
+  flow = df.flow.est.clp$mean_daily_flow, 
+  precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0fafppgt01.pdf"))
 
 storm_plot_indiviudal_to_file(
-  tmp.lst.pot.strm = lst.pot.strm.5.single.gt0.fafp.pgt01, 
-  df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(), "/figures/strmInvdPlots5singlegt0fafppgt01.pdf"))
+  pot.strm = lst.pot.strm.5.single.gt0.fafp.pgt01, 
+  dates = df.flow.est.clp$date, 
+  flow = df.flow.est.clp$mean_daily_flow, 
+  precip = df.daily.precip.max.stations[ , 2],
+  out.file = paste0(getwd(),"/figures/strmInvdPlots5singlegt0fafppgt01.pdf"))
 
 # check storms by seasons
 # seasons as defined by HSPEXP

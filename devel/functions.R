@@ -44,7 +44,7 @@ get_potential_storm_data <- function(spn, dates, flow) {
   df.rises <- df.convex[tmp.diff <= 0, ]
 
   # get potential storm segments using "get_storm_segments" function
-  df.pot.strms <- get_storm_segments(df.tmp, df.convex, df.rises)
+  df.pot.strms <- get_storm_segments(df.tmp$dates, df.tmp$flow, df.convex, df.rises)
 
   # assemble output list from concave, convex, rises and potential storm
   # data.frames
@@ -178,14 +178,14 @@ get_storm_flows <- function(lng.strm, dates, flows, strm.bnds) {
                          strm.num=lng.strm)
 
   # return output
-  return(df.storm)  
+  return(storm)  
 }
 
-storm_count_peaks <- function(flows) {
+storm_count_peaks <- function(flow) {
   # count the number of peaks in a flow segment. the segment neeads at 3 points
   #
   # input:
-  # flows - vector of numeric flow values in cfs
+  # flow - vector of numeric flow values in cfs
   #
   # output:
   # count.peaks - number of peaks in the flow segment
@@ -208,7 +208,7 @@ storm_count_peaks <- function(flows) {
 
 storms_plot_to_file <- function(y.b = NULL, pot.strm = pot.strm, 
                                 dates = dates, flow = flow, 
-                                df.precip = df.precip, 
+                                precip = precip, 
                                 out.file = "strmPlots.pdf") {
 
   # plot flow and precip times series with storm hydrographs highlighted for 
@@ -230,10 +230,10 @@ storms_plot_to_file <- function(y.b = NULL, pot.strm = pot.strm,
   df.p <- data.frame(date = dates, p = precip)
 
   # creating temporary data sets for storm list data set
-  tmp.peaks <- pot.strm$peaks
-  tmp.peaks$dates <- pot.strm$peaks$dates
-  tmp.rises <- pot.strm$rises
-  tmp.rises$dates <- pot.strm$rises$dates
+  tmp.peaks <- pot.strm$convex
+  tmp.peaks$dates <- pot.strm$convex$dates
+  tmp.rises <- pot.strm$concave
+  tmp.rises$dates <- pot.strm$concave$dates
   tmp.rises.sel <- pot.strm$rises.sel
   tmp.rises.sel$dates <- pot.strm$rises.sel$dates
   tmp.pot.strms <- pot.strm$pot.strm
@@ -253,7 +253,7 @@ storms_plot_to_file <- function(y.b = NULL, pot.strm = pot.strm,
     df.p.yr <- df.p[df.p$date >= dt.b & df.p$date <= dt.e & df.p$p > 0, ]
 
   # subset flow data for the current year
-    df.f.yr <- df.f[df.tmp$date >= dt.b & df.tmp$date <= dt.e, ]
+    df.f.yr <- df.f[df.f$date >= dt.b & df.f$date <= dt.e, ]
 
   # set y-limits for current year
     df.yr.ylims <- c(10 ^ (floor(log10(min(df.f.yr$flow)) - 1)),
@@ -295,7 +295,7 @@ storms_plot_to_file <- function(y.b = NULL, pot.strm = pot.strm,
     
   # set up plot for flow, don't plot data. Plot flow data after the storm
   # polygons are plotted so flow lines are borders of polygons
-    plot(x = df.yr$date, y = df.yr$flow, type = "l", log = "y", lty = "blank",
+    plot(x = df.f.yr$date, y = df.f.yr$flow, type = "l", log = "y", lty = "blank",
          xlim = df.yr.xlims, ylim = df.yr.ylims)
     
   # plot each storm
@@ -307,7 +307,7 @@ storms_plot_to_file <- function(y.b = NULL, pot.strm = pot.strm,
     }
     
   # flow data for year plotted over storm polygon
-    lines(x = df.yr$date, y = df.yr$flow, type = "l",col = "blue")
+    lines(x = df.f.yr$date, y = df.f.yr$flow, type = "l",col = "blue")
     
   # points for rises ploted over storm polygon and flow data
     points(x = df.rise$date, y = df.rise$flow)
@@ -342,14 +342,14 @@ storm_plot_indiviudal_to_file <- function(pot.strm = pot.strm,
   # in out.file vairable
   
   # creating temporary data sets for flow and precip  
-  df.f <- data.frame(dates = df.dates, flow = df.flow)
-  df.p <- data.frame(date = df.dates, p = df.precip)
+  df.f <- data.frame(dates = dates, flow = flow)
+  df.p <- data.frame(date = dates, p = precip)
 
   # creating temporary data sets for storm list data set
-  tmp.peaks <- tmp.lst.pot.strm$peaks
-  tmp.rises <- tmp.lst.pot.strm$rises
-  tmp.rises.sel <- tmp.lst.pot.strm$rises.sel
-  tmp.pot.strms <- tmp.lst.pot.strm$pot.strm
+  tmp.peaks <- pot.strm$convex
+  tmp.rises <- pot.strm$concave
+  tmp.rises.sel <- pot.strm$rises.sel
+  tmp.pot.strms <- pot.strm$pot.strm
   strm.nums <- as.numeric(unique(as.character(tmp.pot.strms$strm.num)))
 
   # open pdf file for output
@@ -369,8 +369,8 @@ storm_plot_indiviudal_to_file <- function(pot.strm = pot.strm,
   
   # subset precip and flow for current storm
     tmp.p <- df.p[df.p$date >= tmp.xlims[1] & df.p$date <= tmp.xlims[2], ]
-    tmp.f <- df.tmp[df.tmp$date >= tmp.xlims[1] & 
-                      df.tmp$date <= tmp.xlims[2], ]
+    tmp.f <- df.f[df.f$date >= tmp.xlims[1] & 
+                      df.f$date <= tmp.xlims[2], ]
   
   # set plot area matrix for 2 rows and one column along with other pars
     par(mfrow = c(2, 1), tck = 0.01,  mar = c(0, 1, 0, 0.5), 
