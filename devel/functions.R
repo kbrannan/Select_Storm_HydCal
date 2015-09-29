@@ -491,3 +491,45 @@ get_storm_peak_date <- function(dates, flow) {
   return(peak.date)
   
 }
+
+clean_up <- function(prev.kp = NULL, new.kp = NULL) {
+  # cleans up workspce in environment and allows for keeping certain variables
+  # input:
+  # prev.kp = character vector variable and functions names in workspace 
+  #           before the recent calculations to keep
+  #  new.kp = character vector variable and function names in workspace 
+  #           after the recent calculations to keep
+  # output:
+  # cur.ls = character vector variable and function names currently in workspace
+  #
+  # note: if prev.kp = NULL, then output is returned, else no output is returned
+  
+  # get names the current variables and functions in workspace 
+  # (parent workspace of function)
+  cur.ls <- ls(envir = sys.frame(-1))
+  
+  # return the names of variables and functions and end. This corresponds to the 
+  # intial use of function to get the prev.kp for the next use of function. 
+  # Else define current variable and function names as what to remove
+  if(is.null(prev.kp)) {
+    return(cur.ls)
+  } else {
+    cur.all <- cur.ls
+  }
+  
+  # exlude the contents of "prev.kp" from what to remove
+  if(is.null(prev.kp) == FALSE) {
+    cur.rm.prev <- cur.all[-grep(paste0(prev.kp, collapse = "|"), cur.all)]
+  }
+
+  # exclude the contents of "new.kp" from what to remove
+  if(is.null(new.kp) == FALSE) {
+    cur.rm.new <- cur.all[-grep(paste0(new.kp, collapse = "|"), cur.all)]
+  }
+  
+  # get what to remove
+  cur.rm <- cur.rm.new[cur.rm.new %in% cur.rm.prev]
+  
+  # clean up workspace by removing contents of "cur.rm" 
+  rm(list = cur.rm, envir = sys.frame(-1))
+}
