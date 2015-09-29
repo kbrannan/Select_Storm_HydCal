@@ -47,11 +47,8 @@ storms_plot_to_file(
     precip = df.daily.precip.max.stations[ , 2], 
   out.file = paste0(getwd(), "/figures/strmPlots.pdf"))
 
-# get storm summary table
-df.strm.sum <- storms_to_table(yr.b = NULL, pot.strm = lst.pot.strm)
-
 # clean up
-clean_up(prev.kp = keep, new.kp = c("lst.pot.strm","df.strm.sum"))
+clean_up(prev.kp = keep, new.kp = c("lst.pot.strm"))
 
 # only use storms with duration greater than 5 days, this lower limit 
 # from HSPFEXP Guidence
@@ -279,177 +276,63 @@ clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single.gt0.fafp.pgt01")
 # this part of the investigation, but I will include these storms in the 
 # selection process later
 
-# monthly information
-rm(df.strm.sum)
+# monthly, season and year facors added information
 
-df.strm.sum <- storms_to_table(
-  yr.b = NULL, z = lst.pot.strm.5.single.gt0.fafp.pgt01)
+# check environment for existing data to keep
+keep <- clean_up()
 
+# current best storm set
+pot.strm.cur <- lst.pot.strm.5.single.gt0.fafp.pgt01
+
+# summarize flow for storms
+df.strm.flow <- storms_to_table(
+  yr.b = NULL, pot.strm = pot.strm.cur)
+names(df.strm.flow) <- c(names(df.strm.flow)[1:3], "f.length", "f.peak", 
+                        "f.total.cuft")
+
+# summarize precip for storms
+df.strm.precip <- summaryBy(prec.sum.max ~ strm.num, 
+                       data=lst.pot.strm.5.single.gt0.fafp.pgt01$pot.strm, 
+                       FUN = c(length,max,mean,sum))
+names(df.strm.precip) <- c("strm.num","p.length","p.max","p.mean","p.total")
+
+# combine flow and precip summaries
+df.strm.sum <- merge(x = df.strm.flow, y = df.strm.precip, suffixes = FALSE)
+
+# clean up
+clean_up(prev.kp = keep, new.kp = c("pot.strm.cur","df.strm.num"))
+
+# check environment for existing data to keep
+keep <- clean_up()
+
+# get seasons for storms
 df.strm.months <- data.frame(
   strm.num  = df.strm.sum$strm.num, 
   month.bgn = format(df.strm.sum$date.bgn,format = "%b"), 
-  month.end = format(df.strm.sum$date.end,format = "%b"))
+  month.end = format(df.strm.sum$date.end,format = "%b"),
+  season = NA)
 
-# summer strorms (Months- Jun, Jul, Aug)
-df.months.00 <- df.strm.months[df.strm.months$month.bgn %in% 
-                                 c("Jun","Jul","Aug"),]
+# use forr-loop to get seasons for each storm
+for(ii in 1:length(df.strm.months$strm.num)) {
+  df.strm.months$season[ii] <- get_season(
+    bgn = df.strm.months$month.bgn[ii], end = df.strm.months$month.end[ii])
+}
 
-df.months.01 <- df.months.00[df.months.00$month.end %in% 
-                               c("Jun","Jul","Aug"), ]
+# add season information to the storm data.frame
+df.strm.sum <- merge(x = df.strm.sum, y = df.strm.months, suffixes = FALSE)
 
-lst.pot.strm.sum <- lst.pot.strm.5.single.gt0.fafp.pgt01
+# make season a factor to allow for summaries later
+df.strm.sum$season <- factor(df.strm.sum$season)
 
-lst.pot.strm.sum$pot.strm <- 
-  lst.pot.strm.5.single.gt0.fafp.pgt01$pot.strm[
-    lst.pot.strm.5.single.gt0.fafp.pgt01$pot.strm$strm.num %in% 
-      df.months.01$strm.num, ]
+# add flow-rainfall ratio to storm data.frame THIS DOESN'T WORK!
+# need to convert cu.ft to wtsd-inches
+df.strm.sum <- data(df.strm.sum, 
+                    f.p.ratio = round(df.strm.sum$f.total.cuft / 
+                                        df.strm.sum$p.total, digits = 2))
 
-storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))),
-  lst.pot.strm.sum, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlotsSummer.pdf"))
+# add year to the storm data.frame
+df.strm.sum <- data.frame(df.strm.sum, 
+                          year = format(df.strm.sum$date.bgn, format = "%Y"))
 
-storm_plot_indiviudal_to_file(
-  tmp.lst.pot.strm = lst.pot.strm.sum, 
-  df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(), "/figures/strmInvdPlotsSummer.pdf"))
-
-rm(df.months.00,df.months.01)
-
-## fall strorms (Months- Sep, Oct, Nov)
-df.months.00 <- df.strm.months[df.strm.months$month.bgn %in% 
-                                 c("Sep","Oct","Nov"), ]
-
-df.months.01 <- df.months.00[df.months.00$month.end %in% 
-                               c("Sep","Oct","Nov"), ]
-
-lst.pot.strm.fal <- lst.pot.strm.5.single.gt0.fafp
-
-lst.pot.strm.fal$pot.strm <- 
-  lst.pot.strm.5.single.gt0.fafp$pot.strm[
-    lst.pot.strm.5.single.gt0.fafp$pot.strm$strm.num %in% 
-      df.months.01$strm.num, ]
-
-storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format="%Y"))),
-  lst.pot.strm.fal, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlotsFall.pdf"))
-
-storm_plot_indiviudal_to_file(
-  tmp.lst.pot.strm = lst.pot.strm.fal, 
-  df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(),"/figures/strmInvdPlotsFall.pdf"))
-
-rm(df.months.00,df.months.01)
-
-## winter strorms (Months- Dec, Jan, Feb)
-df.months.00 <- df.strm.months[df.strm.months$month.bgn %in% 
-                                 c("Dec","Jan","Feb"), ]
-
-df.months.01 <- df.months.00[df.months.00$month.end %in% 
-                                 c("Dec","Jan","Feb"), ]
-
-lst.pot.strm.win <- lst.pot.strm.5.single.gt0.fafp
-
-lst.pot.strm.win$pot.strm <- 
-  lst.pot.strm.5.single.gt0.fafp$pot.strm[
-    lst.pot.strm.5.single.gt0.fafp$pot.strm$strm.num %in% 
-      df.months.01$strm.num, ]
-
-storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))),
-  lst.pot.strm.win, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlotsWinter.pdf"))
-
-storm_plot_indiviudal_to_file(
-  tmp.lst.pot.strm = lst.pot.strm.win, 
-  df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(),"/figures/strmInvdPlotsWinter.pdf"))
-
-rm(df.months.00,df.months.01)
-
-## Spring strorms (Months- Mar, Apr, May)
-df.months.00 <- df.strm.months[df.strm.months$month.bgn %in% 
-                                 c("Mar","Apr","May"), ]
-
-df.months.01 <- df.months.00[df.months.00$month.end %in% 
-                                 c("Mar","Apr","May"), ]
-
-lst.pot.strm.spr <- lst.pot.strm.5.single.gt0.fafp
-
-lst.pot.strm.spr$pot.strm <- 
-  lst.pot.strm.5.single.gt0.fafp$pot.strm[
-    lst.pot.strm.5.single.gt0.fafp$pot.strm$strm.num %in% 
-      df.months.01$strm.num, ]
-
-storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))),
-  lst.pot.strm.spr, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlotsSring.pdf"))
-
-storm_plot_indiviudal_to_file(
-  tmp.lst.pot.strm = lst.pot.strm.spr, 
-  df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(),"/figures/strmInvdPlotsSring.pdf"))
-
-# get storms that cross seasons
-chr.strm.sea <- c(unique(as.character(lst.pot.strm.sum$pot.strm$strm.num)),
-  unique(as.character(lst.pot.strm.fal$pot.strm$strm.num)),
-  unique(as.character(lst.pot.strm.win$pot.strm$strm.num)),
-  unique(as.character(lst.pot.strm.spr$pot.strm$strm.num)))
-
-chr.strm.sea <- chr.strm.sea[order(as.numeric(chr.strm.sea))]
-
-df.xse <- df.strm.sum$strm.num[as.character(df.strm.sum$strm.num) %in% 
-                                  chr.strm.sea == FALSE]
-
-lst.pot.strm.xse <- lst.pot.strm.5.single.gt0.fafp
-
-lst.pot.strm.xse$pot.strm <- 
-  lst.pot.strm.5.single.gt0.fafp$pot.strm[
-    lst.pot.strm.5.single.gt0.fafp$pot.strm$strm.num %in% 
-      df.xse, ]
-
-storms_plot_to_file(
-  as.numeric(unique(format(df.flow.est.clp$date,format = "%Y"))),
-  lst.pot.strm.xse, df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, df.daily.precip.max.stations[ , 2], 
-  paste0(getwd(), "/figures/strmPlotsCrossSeason.pdf"))
-
-storm_plot_indiviudal_to_file(
-  tmp.lst.pot.strm = lst.pot.strm.xse, 
-  df.flow.est.clp$date, 
-  df.flow.est.clp$mean_daily_flow, 
-  df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(), "/figures/strmInvdPlotsCrossSeason.pdf"))
-
-## final storms
-df.strm.summary <- storms_to_table(
-  yr.b = NULL, z = lst.pot.strm.5.single.gt0.fafp.pgt01)
-
-df.strm.summary.chr <- data.frame(
-  Number = sprintf("%i",df.strm.summary$strm.num),
-  Start  = format(df.strm.summary$date.bgn, format = "%Y-%m-%d"),
-  End    = format(df.strm.summary$date.end, format = "%Y-%m-%d"),
-  Length = sprintf("%i", round(df.strm.summary$length.days, 0)),
-  Peak   = sprintf("%i", round(df.strm.summary$peak, 0)),
-  Volume = sprintf("%1.2E", df.strm.summary$sum.cuft),
-  stringsAsFactors=FALSE)
-
-# print to pretty table
-xt <- xtable(df.strm.summary.chr)
-
-print(xt, type="html",file=paste0(getwd(),"/tables/strm_sum.html"))
-
+junk <- summaryBy(f.length ~ season + year, data = df.strm.sum, 
+                  FUN = c(max, median, mean, min, length))

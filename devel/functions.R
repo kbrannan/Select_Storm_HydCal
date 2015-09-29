@@ -528,8 +528,56 @@ clean_up <- function(prev.kp = NULL, new.kp = NULL) {
   }
   
   # get what to remove
-  cur.rm <- cur.rm.new[cur.rm.new %in% cur.rm.prev]
+  if(is.null(prev.kp) == FALSE & is.null(new.kp) == FALSE) {
+    cur.rm <- cur.rm.new[cur.rm.new %in% cur.rm.prev]
+  }
+  if(is.null(prev.kp) == FALSE & is.null(new.kp) == TRUE) {
+    cur.rm <- cur.rm.prev
+  }
+  if(is.null(prev.kp) == TRUE & is.null(new.kp) == FALSE) {
+    cur.rm <- cur.rm.new
+  }
   
   # clean up workspace by removing contents of "cur.rm" 
   rm(list = cur.rm, envir = sys.frame(-1))
+}
+
+get_season <- function(bgn = NULL, end = NULL) {
+  # get season for begin and end months of a period
+  # summer and winter month ranges from HSPEXP as
+  # summer Jun-Aug
+  # winter Dec-Feb
+  # fall and seasons defined by me as
+  # Fall Sep-Nov
+  # Spring Mar-May
+  # input:
+  # bgn - POSIXct date that correspond to begining of period
+  # end - POSIXct date that correspond to ending of period
+  # output:
+  # season - string taking value of winter, spring, summer, fall or cross
+  # Note: cross accounts for periods where bgn and end are not in the 
+  #       same season
+
+  # data.frame of months and correspondind seasons
+  df.seasons <- data.frame(mon = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                           season = c("winter", "winter", "spring", "spring",
+                                      "spring", "summer", "summer", "summer",
+                                      "fall", "fall", "fall", "winter"),
+                           stringsAsFactors = FALSE)
+  # get season for begining month
+  bgn.s <- df.seasons$season[df.seasons$mon == format(bgn, format = "%b")]
+  # get season of ending month
+  end.s <- df.seasons$season[df.seasons$mon == format(end, format = "%b")]
+  
+  # check if bgn and end are in same season
+  if(bgn.s == end.s) {
+    
+  # begin and end in same season
+    return(bgn.s)
+    
+  } else {
+  # begin and end not in same season
+    return("cross")
+  }
 }
