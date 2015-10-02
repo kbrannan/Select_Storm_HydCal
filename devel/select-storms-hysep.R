@@ -1,6 +1,5 @@
 # load libraries
-#library(xtable)
-#library(gridExtra)
+library(DVstats)
 
 # local functions
 source(file=paste0(getwd(),"/devel/functions.R"))
@@ -13,11 +12,6 @@ source(file=paste0(getwd(),"/devel/get-obs-flow-data.R"))
 
 # estimate flow data for Big Elk Cree watershed
 source(file=paste0(getwd(),"/devel/estimate-flow.R"))
-
-# set inital pars
-# the span sets the number of days used to identify inflextion points in the
-# peaks function
-spn <- 5 ## span of 5 days to find mins and maxs
 
 # the precip data period is shorter than the flow data, so I used the end of the 
 # precip data to clip (shorten) the estimated flow data
@@ -32,23 +26,36 @@ df.daily.precip.max.stations <- cbind(summaryBy(prec.sum ~ date_org,
 # check environment for existing data to keep
 keep <- clean_up()
 
-# get boundaries of potential storms, see function for rules to get boudaries
-lst.pot.strm <- get_potential_storm_data(
-  spn   =   spn, 
-  dates = df.flow.est.clp$date,
-  flow  = df.flow.est.clp$mean_daily_flow_cfs)
+# baseflow seperation using USGS-HySep R version
+df.hysep88.8 <- hysep(Flow = df.flow.est.clp$mean_daily_flow_cfs, 
+                  Dates = as.Date(df.flow.est.clp$date), da = 88.8)
 
-# get plots of the potential storms
-storms_plot_to_file(
-       y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
-  pot.strm = lst.pot.strm, 
-     dates = df.flow.est.clp$date, 
-      flow = df.flow.est.clp$mean_daily_flow, 
-    precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), "/figures/strmPlots.pdf"))
+chk <- df.hysep88.8$BaseQ - df.hysep1$BaseQ
+
+summary(chk)
+
+# add base flow to flow data frame
+df.flow.est.clp <- data.frame(df.flow.est.clp, base.flow = df.hysep$BaseQ)
+
+# calculate runoff as flow - base.flow
+df.flow.est.clp <- data.frame(df.flow.est.clp, 
+                              runoff = df.flow.est.clp$mean_daily_flow_cfs -
+                                df.flow.est.clp$base.flow)
 
 # clean up
-clean_up(prev.kp = keep, new.kp = c("lst.pot.strm"))
+clean_up(prev.kp = keep, new.kp = c("df.pot.strm"))
+
+
+# check environment for existing data to keep
+keep <- clean_up()
+
+junk <- diff(df.flow.est.clp$runoff, lag=1)
+
+rises <- df.pot.strm$date[ junk > 0 ]
+
+head(df.pot.strm$runoff,25)
+head(junk,25)
+
 
 # only use storms with duration greater than 5 days, this lower limit 
 # from HSPFEXP Guidence

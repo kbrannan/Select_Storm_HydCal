@@ -29,6 +29,7 @@ get_potential_storm_data <- function(spn, dates, flow) {
 
   # load libraries
   require(smwrBase)
+  require(DVstats)
   
   # create local data.frame of date and flow for processing
   df.tmp <- data.frame(dates = as.POSIXct(dates), flow = flow)
@@ -44,7 +45,8 @@ get_potential_storm_data <- function(spn, dates, flow) {
   df.rises <- df.convex[tmp.diff <= 0, ]
 
   # get potential storm segments using "get_storm_segments" function
-  df.pot.strms <- get_storm_segments(df.tmp$dates, df.tmp$flow, df.convex, df.rises)
+  df.pot.strms <- get_storm_segments(df.tmp$dates, df.tmp$flow, df.convex, 
+                                     df.rises)
 
   # assemble output list from concave, convex, rises and potential storm
   # data.frames

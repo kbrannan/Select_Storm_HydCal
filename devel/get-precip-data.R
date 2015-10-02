@@ -8,8 +8,7 @@
 library(doBy)
 
 # check environment for existing data to keep
-if (length(ls(all.names = TRUE)) > 0) 
-  dont.del <- paste0("(",ls(all.names=TRUE),")", collapse = "|")
+keep <- clean_up()
 
 # set path for the precip data files
 chr.prec.dir <- paste0(strsplit(getwd(),
@@ -54,8 +53,4 @@ df.daily.precip <- cbind(df.daily.precip,
                          date = as.POSIXct(strptime(df.daily.precip[,1], 
                                                   format = "%Y-%m-%d")))
 # clean up
-if (1*exists("dont.del") == 0) 
-  rm(list = ls(all.names = TRUE)[-grep("df.daily.precip",ls(all.names = TRUE))])
-if (1*exists("dont.del") == 1) 
-  rm(list = ls(all.names = TRUE)[-grep(paste0("(df.daily.precip)|",dont.del),
-                                       ls(all.names = TRUE))])
+clean_up(prev.kp = keep, new.kp = "df.daily.precip")
