@@ -11,3 +11,8 @@ chr.strm.dates <- paste0(" ",format(df.strm.sum$date.bgn, format = "%m/%d/%Y"), 
 # use format - "mpeak1_max             7910.000        1.000000E-02  mpeak"
 # mpeak1_max             7910.000        1.000000E-02  mpeak
 # mpeak1_max          7.91000E+03        1.000000E-02  mpeak
+
+junk <- df.strm.sum[1,]
+junk
+paste0(" mpeak1_max          ", sprintf(junk$peak.tfl, fmt="%1.5E"),
+       "        1.000000E-02  mpeak")
