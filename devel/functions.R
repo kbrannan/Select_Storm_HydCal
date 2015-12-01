@@ -566,6 +566,70 @@ storms_to_table <- function(yr.b, pot.strm) {
   return(df.table)
 }
 
+storms_with_SRO_to_table <- function(yr.b, pot.strm) {
+  # summarize storm data that has SRO and total flow into a data frame
+  # input:
+  # y.b - single year to summarize 
+  #       (optional, if left out summary done for all the years)
+  # pot.strm - list of data.frames of dates and flows for storm info
+  # output:
+  # df.table - summary of the storms with columns
+  #         strm.num - number assigned to storm from get_potential_storm_data
+  #                    function
+  #      length.days - length of storm in days
+  #         peak.tfl - peak flow of total flow for storms in cfs
+  #     sum.cuft.tfl - flow volume of total flow for storm in cubic feet
+  #         peak.SRO - peak flow of SRO for storms in cfs
+  #     sum.cuft.SRO - flow volume of SRO for storm in cubic feet
+  
+    
+  # load package for SummaryBy function
+  require(doBy)
+  
+  # create local temporary data frame fo storm flows
+  y <- pot.strm$pot.strm
+  
+  # if done for single year
+  if(is.null(yr.b) != TRUE) {
+    
+    # start date for water year
+    dt.b <- as.POSIXct(paste0(yr.b, "/10/01"))
+    
+    # end date for water year
+    dt.e <- as.POSIXct(paste0(as.numeric(format(dt.b, "%Y")) + 1, "/09/30"))
+    x <- y[y$date >= dt.b & y$date <= dt.e, ]
+  } else x <- y # do all years
+  
+  # summarize for storms
+  # get storm number
+  df.table <- data.frame(strm.num = summaryBy(strm.num ~ 
+                                                strm.num,x,FUN=max)[ , 2], 
+                         date.bgn = x[firstobs(~strm.num, x), "date"], 
+                         date.end = x[lastobs(~strm.num,  x), "date"])
+  
+  # add length of storms in days
+  df.table <- data.frame(df.table,
+                         length.days = as.numeric(df.table$date.end - 
+                                                    df.table$date.bgn))
+
+  # add peak total flow and total flow volume for storms
+  df.table <- data.frame(df.table,
+                         peak.tfl = summaryBy(flow ~ strm.num, x, 
+                                              FUN = max)[ , 2],
+                         sum.cuft.tfl = summaryBy(flow ~ strm.num, x, 
+                                            FUN = sum)[ , 2] * 
+                           (3600 * 24) * df.table$length.days)
+  # add peak SRO and SRO volume for storms
+  df.table <- data.frame(df.table,
+                         peak.SRO = summaryBy(SRO ~ strm.num, x, 
+                                              FUN = max)[ , 2],
+                         sum.cuft.SRO = summaryBy(SRO ~ strm.num, x, 
+                                                  FUN = sum)[ , 2] * 
+                           (3600 * 24) * df.table$length.days)
+  # done return result
+  return(df.table)
+}
+
 get_storm_peak_date <- function(dates, flow) {
   # get date of storm peak
   # input:

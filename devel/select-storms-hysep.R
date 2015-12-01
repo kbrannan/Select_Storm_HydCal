@@ -154,13 +154,6 @@ storms_plot_to_file(
     precip = df.daily.precip.max.stations[ , 2], 
   out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0.pdf"))
 
-storm_plot_indiviudal_to_file(
-  pot.strm = lst.pot.strm.5.single.gt0, 
-  dates = df.flow.est.clp$date, 
-  flow = df.flow.est.clp$mean_daily_flow, 
-  precip = df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(),"/figures/strmInvdPlots5singlegt0.pdf"))
-
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single")
 
@@ -222,13 +215,6 @@ storms_plot_to_file(
   precip = df.daily.precip.max.stations[ , 2], 
   out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0fafp.pdf"))
 
-storm_plot_indiviudal_to_file(
-  pot.strm = lst.pot.strm.5.single.gt0.fafp, 
-  dates = df.flow.est.clp$date, 
-  flow = df.flow.est.clp$mean_daily_flow, 
-  precip = df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(),"/figures/strmInvdPlots5singlegt0fafp.pdf"))
-
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single.gt0.fafp")
 
@@ -261,13 +247,6 @@ storms_plot_to_file(
   flow = df.flow.est.clp$mean_daily_flow, 
   precip = df.daily.precip.max.stations[ , 2], 
   out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0fafppgt01.pdf"))
-
-storm_plot_indiviudal_to_file(
-  pot.strm = lst.pot.strm.5.single.gt0.fafp.pgt01, 
-  dates = df.flow.est.clp$date, 
-  flow = df.flow.est.clp$mean_daily_flow, 
-  precip = df.daily.precip.max.stations[ , 2],
-  out.file = paste0(getwd(),"/figures/strmInvdPlots5singlegt0fafppgt01.pdf"))
 
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single.gt0.fafp.pgt01")
@@ -313,7 +292,129 @@ storms_plot_to_file(
   dates = df.flow.est.clp$date, 
   flow = df.flow.est.clp$mean_daily_flow, 
   precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0fafppgt01fbgte.pdf"))
+  out.file = paste0(getwd(), 
+                    "/figures/strmPlots5daySinglegt0fafppgt01fbgte.pdf"))
+
+
+# keep storms with ration of runoff to precip <= 1
+
+# check environment for existing data to keep
+keep <- clean_up()
+
+# make a copy of the previous storm-list
+lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1 <- 
+  lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte
+
+# get storm data
+df.tmp <- lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1$pot.strm
+
+
+# summarize flow for storms
+df.strm.flow <- storms_with_SRO_to_table(
+  yr.b = NULL, pot.strm = lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1)
+#names(df.strm.flow) <- c(names(df.strm.flow)[1:3], "f.length", "f.peak", 
+#                        "f.total.cuft")
+
+# summarize precip for storms
+df.strm.precip <- summaryBy(prec.sum.max ~ strm.num, 
+                            data=lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1$pot.strm, 
+                            FUN = c(length,max,mean,sum))
+names(df.strm.precip) <- c("strm.num","p.length","p.max","p.mean","p.total")
+
+# combine flow and precip summaries
+df.strm.sum <- merge(x = df.strm.flow, y = df.strm.precip, suffixes = FALSE)
+
+df.tmp <- df.strm.sum
+
+cf.fact <- 88.8 * 27878400 / 12
+df.tmp <- data.frame(df.tmp, 
+                          f.p.ratio = round(df.tmp$sum.cuft.SRO / 
+                                              (df.tmp$p.total * cf.fact),
+                                            digits = 2))
+keep.storms <- as.numeric(df.tmp$strm.num[df.tmp$f.p.ratio <= 1])
+
+lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1$pot.strm <- 
+  lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1$pot.strm[
+    lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1$pot.strm$strm.num %in%
+      keep.storms, 
+  ]
+
+# plot results
+storms_plot_to_file(
+  y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1, 
+  dates = df.flow.est.clp$date, 
+  flow = df.flow.est.clp$mean_daily_flow, 
+  precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), 
+                    "/figures/strmPlots5daySinglegt0fafppgt01fbgterorle1.pdf"))
+
+
+storm_plot_indiviudal_to_file(
+  pot.strm = lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1,
+  dates  = df.flow.est.clp$date,
+  flow   = df.flow.est.clp$mean_daily_flow,
+  precip = df.daily.precip.max.stations[ , 2],
+  out.file  = paste0(getwd(),
+                     "/figures/indstrmPlots5daySinglegt0fafppgt01fbgterorle1.pdf"))
+
+# clean up
+clean_up(prev.kp = keep, new.kp = 
+           "lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1")
+  
+
+# a few storms had storm flow that seemed to be above the stream flow during
+# the falling limb of the hydrograph
+# Storms to check are strm.num 16, 80, 187, 216 and 428
+# check environment for existing data to keep
+keep <- clean_up()
+
+df.tmp <- lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1$pot.strm
+
+tmp.strm.nums <- c(16, 80, 187, 216, 428)
+
+df.strm.flows.chk <- data.frame(strm.num = tmp.strm.nums,
+                                date.chk ="", flow.chk ="",
+                                stringsAsFactors = FALSE)
+for(ii in 1:length(df.strm.flows.chk$strm.num)) {
+  
+  tmp.strm.num <- df.strm.flows.chk$strm.num[ii]
+  
+  #get storm date
+  df.tmp.strm <- df.tmp[ df.tmp$strm.num == tmp.strm.num, ]
+  tmp.bg.d <- df.tmp.strm$date[1]
+  tmp.ed.d <- df.tmp.strm$date[length(df.tmp.strm[ ,1])]
+  
+  # get flow data
+  df.tmp.flow <- df.flow.est.clp[df.flow.est.clp$date >= tmp.bg.d & 
+                                   df.flow.est.clp$date <= tmp.ed.d, ]
+  names(df.tmp.flow) <- gsub("^date$","fl.date", names(df.tmp.flow))
+  
+  # make temp df of storm and flow data
+  junk <- cbind(df.tmp.strm[ , c("date", "flow")], 
+                df.tmp.flow[ , c("fl.date", "mean_daily_flow_cfs")])
+  # check dates
+  if(sum((junk$date - junk$fl.date) == 0) == length(junk[ , 1])) {
+    df.strm.flows.chk$date.chk[ii] <- "yes"
+  } else {
+    df.strm.flows.chk$date.chk[ii] <- "no"
+  }
+  
+  # check flows
+  if(sum((junk$flow - junk$mean_daily_flow_cfs) == 0) == length(junk[ , 1])) {
+    df.strm.flows.chk$flow.chk[ii] <- "yes"
+  } else {
+    df.strm.flows.chk$flow.chk[ii] <- "no"
+  }
+}
+
+# The flows for the storms and the orginal flow time-series match. The apparent
+# storm flow (yellow polygon) portion above the flow time-series line in the 
+# plots of the individual storm may be an artifact of the graphics processing
+# of the plot command to a pdf file or something
+
+# clean up
+clean_up(prev.kp = keep, new.kp = "df.strm.flows.chk")
 
 # check storms by seasons
 # seasons as defined by HSPEXP
@@ -332,13 +433,11 @@ storms_plot_to_file(
 keep <- clean_up()
 
 # current best storm set
-pot.strm.cur <- lst.pot.strm.5.single.gt0.fafp.pgt01
+pot.strm.cur <- lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte.rorle1
 
 # summarize flow for storms
-df.strm.flow <- storms_to_table(
+df.strm.flow <- storms_with_SRO_to_table(
   yr.b = NULL, pot.strm = pot.strm.cur)
-names(df.strm.flow) <- c(names(df.strm.flow)[1:3], "f.length", "f.peak", 
-                        "f.total.cuft")
 
 # summarize precip for storms
 df.strm.precip <- summaryBy(prec.sum.max ~ strm.num, 
@@ -350,7 +449,7 @@ names(df.strm.precip) <- c("strm.num","p.length","p.max","p.mean","p.total")
 df.strm.sum <- merge(x = df.strm.flow, y = df.strm.precip, suffixes = FALSE)
 
 # clean up
-clean_up(prev.kp = keep, new.kp = c("pot.strm.cur","df.strm.num"))
+clean_up(prev.kp = keep, new.kp = c("pot.strm.cur","df.strm.sum"))
 
 # check environment for existing data to keep
 keep <- clean_up()
@@ -362,7 +461,7 @@ df.strm.months <- data.frame(
   month.end = format(df.strm.sum$date.end,format = "%b"),
   season = NA)
 
-# use forr-loop to get seasons for each storm
+# use for-loop to get seasons for each storm
 for(ii in 1:length(df.strm.months$strm.num)) {
   df.strm.months$season[ii] <- get_season(
     bgn = df.strm.months$month.bgn[ii], end = df.strm.months$month.end[ii])
@@ -381,37 +480,73 @@ df.strm.sum <- data.frame(df.strm.sum,
 # add flow-rainfall ratio to storm data.frame 
 # need to convert cu.ft to wtsd-inches
 # coversion of precip-inches to precip-cuft. Watershed area 88.8 sqr miles
-########
-# There are many storms where the flow-rainfall ratio is greater than one!
-# I think this may result from baseflow being included in the storms I 
-# identified. The appraoch I used does not account for this possibility.
-# I am going to use the criteria I used in this script, but use a R version of
-# USGS HySep to identify potential storm boundaries. This version of HySep is
-# in the R-package DVstats
-########
-
 cf.fact <- 88.8 * 27878400 / 12
 df.strm.sum <- data.frame(df.strm.sum, 
-                    f.p.ratio = round(df.strm.sum$f.total.cuft / 
+                    f.p.ratio = round(df.strm.sum$sum.cuft.SRO / 
                                         (df.strm.sum$p.total * cf.fact),
                                          digits = 2))
 
-tmp.strm.sum <- df.strm.sum[ df.strm.sum$f.p.ratio <= 1, ]
+df.strm.sum$season <- factor(df.strm.sum$season, levels = c("fall", "winter", 
+                                                            "spring", "summer",
+                                                            "cross"))
 
-tmp.f.sum.f.p.ratio <- summaryBy(f.p.ratio ~ season, 
-          data = tmp.strm.sum, 
-          FUN = c(max, median, mean, min, length))
+# clean up
+clean_up(prev.kp = keep, new.kp = c("df.strm.sum"))
 
-# summaries of f.p.ratio
-
-# by season
-f.sum.f.p.ratio <- summaryBy(f.p.ratio ~ season, 
+# summarize by season
+df.sum.season <- summaryBy(length.days + peak.tfl + sum.cuft.tfl +
+                          peak.SRO + sum.cuft.SRO + f.p.ratio ~ season, 
                           data = df.strm.sum, 
                           FUN = c(max, median, mean, min, length))
+# plots
+library(ggplot2)
 
-# summaries of flow info
+# open pdf file for output
+pdf(file=paste0(getwd(), "/figures/barplots of stormstats.pdf")
+    , width = 11, height = 8.5, onefile = TRUE)
 
-# by season
-f.sum.season <- summaryBy(f.length + f.peak + f.total.cuft ~ season, 
-                          data = df.strm.sum, 
-                          FUN = c(max, median, mean, min, length))
+# length in days by season
+plt.len.days <- ggplot(data = df.strm.sum, aes(season, length.days)) +
+  geom_boxplot() + geom_point(position = position_jitter(w = 0.1, h = 0.1))
+plt.len.days <- plt.len.days + xlab("Season") + ylab("Storm Duration (days)")
+plt.len.days <- plt.len.days + geom_text(data = df.sum.season, 
+                                         aes(label = length.days.length, 
+                                             x = season, y = 20))
+plot(plt.len.days)
+
+# peak flow by season
+plt.peak.flow <- ggplot(data = df.strm.sum, aes(season, peak.tfl)) +
+  geom_boxplot() + geom_point(position = position_jitter(w = 0.1, h = 0.1)) +
+  scale_y_log10()
+plt.peak.flow <- plt.peak.flow + xlab("Season") + ylab("Storm Peak Flow (cfs)")
+plt.peak.flow <- plt.peak.flow + geom_text(data = df.sum.season, 
+                                         aes(label = peak.tfl.length, 
+                                             x = season, y = 5000))
+plot(plt.peak.flow)
+
+# flow volume by season
+plt.vol.flow <- ggplot(data = df.strm.sum, aes(season, sum.cuft.tfl)) +
+  geom_boxplot() + geom_point(position = position_jitter(w = 0.1, h = 0.1)) +
+  scale_y_log10()
+plt.vol.flow <- plt.vol.flow + xlab("Season") + ylab("Storm Flow Volume (cu. ft.)")
+plt.vol.flow <- plt.vol.flow + geom_text(data = df.sum.season, 
+                                           aes(label = sum.cuft.tfl.length, 
+                                               x = season, y = 1e+10))
+plot(plt.vol.flow)
+
+# flow to precip ratio by season
+plt.fpr.flow <- ggplot(data = df.strm.sum, aes(season, f.p.ratio)) +
+  geom_boxplot() + geom_point(position = position_jitter(w = 0.1, h = 0.1))
+plt.fpr.flow <- plt.fpr.flow + xlab("Season") + ylab("Runoff to Precip Ratio")
+plt.fpr.flow <- plt.fpr.flow + geom_text(data = df.sum.season, 
+                                         aes(label = sum.cuft.tfl.length, 
+                                             x = season, y = 1.1))
+plot(plt.fpr.flow)
+
+# close file done
+dev.off()
+
+# save results for devloping PEST input
+image.list <- c("pot.strm.cur", "df.strm.sum", "df.sum.season")
+save(list = image.list, 
+     file = paste0(getwd(), "/data/storm-data-for-PEST.RData"))
