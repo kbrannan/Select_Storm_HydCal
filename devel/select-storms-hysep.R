@@ -1,6 +1,3 @@
-# load libraries
-library(DVstats)
-
 # local functions
 source(file=paste0(getwd(),"/devel/functions.R"))
 
@@ -26,16 +23,13 @@ df.daily.precip.max.stations <- cbind(summaryBy(prec.sum ~ date_org,
 # check environment for existing data to keep
 keep <- clean_up()
 
+require(DVstats)
 # baseflow seperation using USGS-HySep R version
 df.hysep88.8 <- hysep(Flow = df.flow.est.clp$mean_daily_flow_cfs, 
                   Dates = as.Date(df.flow.est.clp$date), da = 88.8)
 
-chk <- df.hysep88.8$BaseQ - df.hysep1$BaseQ
-
-summary(chk)
-
 # add base flow to flow data frame
-df.flow.est.clp <- data.frame(df.flow.est.clp, base.flow = df.hysep$BaseQ)
+df.flow.est.clp <- data.frame(df.flow.est.clp, base.flow = df.hysep88.8$BaseQ)
 
 # calculate runoff as flow - base.flow
 df.flow.est.clp <- data.frame(df.flow.est.clp, 
@@ -45,31 +39,37 @@ df.flow.est.clp <- data.frame(df.flow.est.clp,
 # clean up
 clean_up(prev.kp = keep, new.kp = c("df.pot.strm"))
 
-
-# check environment for existing data to keep
-keep <- clean_up()
-
-junk <- diff(df.flow.est.clp$runoff, lag=1)
-
-rises <- df.pot.strm$date[ junk > 0 ]
-
-head(df.pot.strm$runoff,25)
-head(junk,25)
-
-
 # only use storms with duration greater than 5 days, this lower limit 
 # from HSPFEXP Guidence
 
 # check environment for existing data to keep
 keep <- clean_up()
 
-# make copy of previous potential storm-list
-lst.pot.strm.5 <- lst.pot.strm
+# get potential storm-list
+## need to added storm summary info to list from get_potential_storm_data_hysep
+## function
+
+lst.pot.strm <- get_potential_storm_data_hysep(spn = 5, 
+                                                  dates = df.hysep88.8$Dates, 
+                                                  flow = df.hysep88.8$Flow,
+                                                  baseflow = df.hysep88.8$BaseQ)
+
+# plot result
+storms_plot_to_file(
+  y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm, 
+  dates = df.flow.est.clp$date, 
+  flow = df.flow.est.clp$mean_daily_flow, 
+  precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), "/figures/strmPlots.pdf"))
+
 
 # subset storms for storms with durations greter than or equal to 5 days
-df.strm.sum.5 <- lst.pot.strm$pot.strm[df.strm.sum$length.days >= 5, ]
+tmp.length <- doBy::summaryBy(date ~ strm.num, data=lst.pot.strm$pot.strm, FUN=length)
+tmp.length.5 <- tmp.length[tmp.length$date.length >= 5, "strm.num"]
+lst.pot.strm.5 <- lst.pot.strm
 lst.pot.strm.5$pot.strm <- lst.pot.strm$pot.strm[lst.pot.strm$pot.strm$strm.num 
-                                                 %in% df.strm.sum.5$strm.num, ]
+                                                 %in% tmp.length.5, ]
 # plot result
 storms_plot_to_file(
        y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
@@ -271,6 +271,49 @@ storm_plot_indiviudal_to_file(
 
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single.gt0.fafp.pgt01")
+
+# keep storms where begin flow greater than end flow
+
+# check environment for existing data to keep
+keep <- clean_up()
+
+# make a copy of the previous storm-list
+lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte <- 
+  lst.pot.strm.5.single.gt0.fafp.pgt01
+
+# get storm data
+df.tmp <- lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte$pot.strm
+
+# functions to get first and last elements in a vector
+get_first <- function(x) x[1]
+
+get_last <- function(x) x[length(x)]
+
+# get the begin and end flow for each storm
+df.pot.00 <- summaryBy(flow ~ strm.num, 
+                       data=df.tmp, 
+                       FUN = c(get_first, get_last))
+names(df.pot.00) <- c("strm.num", "f.bg", "f.ed")
+
+# select storms with total precip greater than or equal 0.1 inch
+keep.strm.nums <- as.numeric(df.pot.00$strm.num[df.pot.00$f.bg >= 
+                                                  df.pot.00$f.ed])
+
+# create new storm-list using the data.frame of storms where total precip is 
+# greater than or equal to 0.1 inch
+lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte$pot.strm <- 
+  lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte$pot.strm[
+    lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte$pot.strm$strm.num %in% 
+             keep.strm.nums, ]
+
+# plot results
+storms_plot_to_file(
+  y.b = as.numeric(unique(format(df.flow.est.clp$date, format = "%Y"))),
+  pot.strm = lst.pot.strm.5.single.gt0.fafp.pgt01.fbgte, 
+  dates = df.flow.est.clp$date, 
+  flow = df.flow.est.clp$mean_daily_flow, 
+  precip = df.daily.precip.max.stations[ , 2], 
+  out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0fafppgt01fbgte.pdf"))
 
 # check storms by seasons
 # seasons as defined by HSPEXP
