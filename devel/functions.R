@@ -57,6 +57,93 @@ get_potential_storm_data <- function(spn, dates, flow) {
   return(lst.pot.strm)
 }
 
+get_potential_storm_data_hysep <- function(spn, dates, flow, baseflow) {
+  # identify storms using flow and estimated baseflow time-series. surface
+  # flow associated with storm events estimated by subtracting the estimated
+  # baseflow from the flow time-series. select potential storm segments as 
+  # no zero estimate flow segments
+  # 
+  # input:
+  #      spn -  span is the number of days used to calculate change in slopes, min is 
+  #             3 and max not limited. larger the span the more smoothing occurs and 
+  #             could miss some storms. smaller span increases sensitivity but also
+  #             increases identification of non-storm fluctuations. 5-days safe value
+  #             and use additional criteria outside this function
+  #     date - vector of POSIXct dates that correspond to flow values
+  #     flow - vector of numeric flow values in cfs
+  # baseflow - vector of numeric baseflow values in cfs, can estimate baseflow
+  #            using functions like hysep in the DVstats package
+  # 
+  # output:
+  # lst.pot.strm - list of data.frames of dates and flows for storm info 
+  #    SRO  - estimated surface runoff in cfs
+  #    pot.strm - flow segments of potential storms. storms assigned number as
+  #               a facotr to facilitate summary anaysis and further processing
+  #
+  # created by Kevin Brannan 2015-09-22
+  # 
+  
+  # load libraries
+  require(smwrBase)
+  require(DVstats)
+
+  spn <- 5
+  dates <- df.flow.est.clp$date
+  flow <- df.flow.est.clp$mean_daily_flow_cfs
+  baseflow <- df.flow.est.clp$base.flow
+    
+  # create local data.frame of date and flow for processing
+  df.tmp <- data.frame(dates = as.POSIXct(dates), 
+                       flow = flow,
+                       baseflow = baseflow,
+                       SRO = flow - baseflow)
+  
+  # find the potential rises and peaks using smwrBase::peaks
+  df.concave <- df.tmp[peaks(df.tmp$SRO, span = spn) == TRUE, ]
+  df.convex  <- df.tmp[peaks(-1 * df.tmp$SRO, span = spn) == TRUE, ]
+  if(max(df.convex$dates) == max(df.tmp$dates)) {
+    df.convex <- df.convex[-length(df.convex[ , 1]), ]
+  } 
+  
+  # identify the rises from convex by the sign of the inflextion using 
+  # difference between the convex flow and the imediately proceeding flow. 
+  # negative or zero identifies rising hydrograph
+  tmp.diff <- diff(df.convex$SRO, lag = 1)
+  df.rises <- df.convex[tmp.diff <= 0, ]
+  
+  # need to set flow equal to SRO for get_storm_segements function
+  df.convex$flow <- df.convex$SRO
+  df.convex <- df.convex[ , c("dates","flow")]
+  df.rises$flow <- df.rises$SRO
+  df.rises <- df.rises[ , c("dates","flow")]
+  
+  # get potential storm segments using "get_storm_segments" function
+  df.pot.strms <- get_storm_segments(dates  = df.tmp$dates, 
+                                     flows  = df.tmp$SRO, 
+                                     convex = df.convex, 
+                                     rises = df.rises)
+  
+  # get total flow for each storm segment in addition to SRO rename flow to SRO from
+  # get_storm_segments and add flow for segments
+  df.tmp.f <- df.tmp[ , c("dates", "flow")]
+  names(df.tmp.f) <- c("date", "flow")
+  df.tmp.f$date <- strftime(df.tmp.f$date, format = "%Y-%m-%d")
+  df.tmp.s <- df.pot.strms[ , c("strm.num", "date")]
+  df.tmp.s$date <- strftime(df.tmp.s$date, format = "%Y-%m-%d")
+  df.tmp.s.f <- merge(x = df.tmp.s, y = df.tmp.f, by = "date")
+  df.pot.strms <- data.frame(df.pot.strms, SRO = df.pot.strms$flow)
+  df.pot.strms$flow <- df.tmp.s.f$flow
+  df.pot.strms <- df.pot.strms[ , c("strm.num", "date", "flow", "SRO")]
+  
+  # assemble output list from concave, convex, rises and potential storm
+  # data.frames
+  lst.pot.strm <- list(SRO = df.tmp$SRO, pot.strm = df.pot.strms)
+  
+  # return output
+  return(lst.pot.strm)
+}
+
+
 get_storm_segments <- function(dates, flows, convex, rises) {
   # identify storm segements from convex inflections in flow time-series and a 
   # subset of the convex inflections identified as rises in flow.The main point
@@ -91,6 +178,7 @@ get_storm_segments <- function(dates, flows, convex, rises) {
                                  flow.bgn = rises$flow)
 
   # get storm segments using "get_storm_flows" function
+  # error here when used with get_potemtial_storm_data_hysep
   pot.strms <- do.call(rbind, 
                            lapply(seq(1:(length(df.pot.strm.bnds[, 1])-1)),
                                   get_storm_flows,
@@ -475,6 +563,70 @@ storms_to_table <- function(yr.b, pot.strm) {
                                             FUN = sum)[ , 2] * 
                            (3600 * 24) * df.table$length.days)
   # done retirn result
+  return(df.table)
+}
+
+storms_with_SRO_to_table <- function(yr.b, pot.strm) {
+  # summarize storm data that has SRO and total flow into a data frame
+  # input:
+  # y.b - single year to summarize 
+  #       (optional, if left out summary done for all the years)
+  # pot.strm - list of data.frames of dates and flows for storm info
+  # output:
+  # df.table - summary of the storms with columns
+  #         strm.num - number assigned to storm from get_potential_storm_data
+  #                    function
+  #      length.days - length of storm in days
+  #         peak.tfl - peak flow of total flow for storms in cfs
+  #     sum.cuft.tfl - flow volume of total flow for storm in cubic feet
+  #         peak.SRO - peak flow of SRO for storms in cfs
+  #     sum.cuft.SRO - flow volume of SRO for storm in cubic feet
+  
+    
+  # load package for SummaryBy function
+  require(doBy)
+  
+  # create local temporary data frame fo storm flows
+  y <- pot.strm$pot.strm
+  
+  # if done for single year
+  if(is.null(yr.b) != TRUE) {
+    
+    # start date for water year
+    dt.b <- as.POSIXct(paste0(yr.b, "/10/01"))
+    
+    # end date for water year
+    dt.e <- as.POSIXct(paste0(as.numeric(format(dt.b, "%Y")) + 1, "/09/30"))
+    x <- y[y$date >= dt.b & y$date <= dt.e, ]
+  } else x <- y # do all years
+  
+  # summarize for storms
+  # get storm number
+  df.table <- data.frame(strm.num = summaryBy(strm.num ~ 
+                                                strm.num,x,FUN=max)[ , 2], 
+                         date.bgn = x[firstobs(~strm.num, x), "date"], 
+                         date.end = x[lastobs(~strm.num,  x), "date"])
+  
+  # add length of storms in days
+  df.table <- data.frame(df.table,
+                         length.days = as.numeric(df.table$date.end - 
+                                                    df.table$date.bgn))
+
+  # add peak total flow and total flow volume for storms
+  df.table <- data.frame(df.table,
+                         peak.tfl = summaryBy(flow ~ strm.num, x, 
+                                              FUN = max)[ , 2],
+                         sum.cuft.tfl = summaryBy(flow ~ strm.num, x, 
+                                            FUN = sum)[ , 2] * 
+                           (3600 * 24) * df.table$length.days)
+  # add peak SRO and SRO volume for storms
+  df.table <- data.frame(df.table,
+                         peak.SRO = summaryBy(SRO ~ strm.num, x, 
+                                              FUN = max)[ , 2],
+                         sum.cuft.SRO = summaryBy(SRO ~ strm.num, x, 
+                                                  FUN = sum)[ , 2] * 
+                           (3600 * 24) * df.table$length.days)
+  # done return result
   return(df.table)
 }
 
