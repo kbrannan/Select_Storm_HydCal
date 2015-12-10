@@ -28,6 +28,9 @@ require(DVstats)
 df.hysep88.8 <- hysep(Flow = df.flow.est.clp$mean_daily_flow_cfs, 
                   Dates = as.Date(df.flow.est.clp$date), da = 88.8)
 
+# save hysep results for later use
+save(df.hysep88.8, file = "hysep88_8.RData")
+
 # add base flow to flow data frame
 df.flow.est.clp <- data.frame(df.flow.est.clp, base.flow = df.hysep88.8$BaseQ)
 
