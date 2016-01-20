@@ -22,6 +22,15 @@ chr.flow.file <- "station_14306030_mdfDaily_time_series.txt"
 chr.obs.data <- scan(file = paste0(chr.flow.dir, "/", chr.flow.file),
                      what = "caharacter", sep = "\n")
 
+lil.junk <- head(chr.obs.data,100)
+
+## variable names in row 14
+chr.var <- do.call(c, 
+                   strsplit(
+                     gsub(" {1, }$","", 
+                          gsub("^ {1, }", "", chr.obs.data[14])),
+                     split = " {2, }"))
+
 df.flow.obs <- read.table(file=paste0(chr.flow.dir,"/",chr.flow.file), 
                           header = TRUE, sep="\t")
 
