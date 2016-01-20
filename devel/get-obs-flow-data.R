@@ -31,7 +31,10 @@ chr.var <- do.call(c,
                           gsub("^ {1, }", "", chr.obs.data[14])),
                      split = " {2, }"))
 
-# get data
+
+# get data Problem: some of the rows will have three columns instead of two if
+# there is a flag for estimated data
+# try using fixed format to split string
 chr.data <- 
   do.call(rbind,
           strsplit(
@@ -42,6 +45,18 @@ chr.data <-
                  ), 
             split = " {2, }")
           )
+
+chr.data <- 
+  do.call(rbind,
+          strsplit(
+            gsub(" {1, }$","", 
+                 gsub("^ {1, }","", 
+                      lil.junk[16:length(lil.junk)]
+                 )
+            ), 
+            split = " {2, }")
+  )
+
 
 df.flow.obs <- read.table(file=paste0(chr.flow.dir,"/",chr.flow.file), 
                           header = TRUE, sep="\t")
