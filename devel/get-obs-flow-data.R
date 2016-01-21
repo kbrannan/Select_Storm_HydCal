@@ -19,68 +19,27 @@ chr.flow.dir <- "M:/Models/Bacteria/HSPF/HydroCal201506/R_projs/Select_Storm_Hyd
 ##chr.flow.file <- "Station_14306030_mean_daily_flow.txt"
 chr.flow.file <- "station_14306030_mdfDaily_time_series.txt"
 
-chr.obs.data <- scan(file = paste0(chr.flow.dir, "/", chr.flow.file),
-                     what = "caharacter", sep = "\n")
-
-lil.junk <- head(chr.obs.data,100)
-
+## read as fixed format file exclude header info (skip=15)
 chr.obs.data <- read.fwf(file = paste0(chr.flow.dir, "/", chr.flow.file), 
                  widths = c(31,24,26), skip = 15, stringsAsFactors = FALSE)
 
+## exclude "Estimated" column
 chr.obs.data <- chr.obs.data[ , -3]
 
-names(chr.obs.data) <- c("date", "flow")
+## name variables
+names(chr.obs.data) <- c("date", "mean_daily_flow_cfs")
 
-junk <- chr.obs.data
+## exclude last line which is all "-"
+chr.obs.data <- chr.obs.data[-1 * length(chr.obs.data$flow), ]
 
-strptime(junk$date[1:5], format = "%m/%d/%Y")
-junk$date <- as.POSIXct(junk$date, format = "%m/%d/%Y")
-junk$flow <- as.numeric(junk$flow)
+## convert character to POSIXct for dates
+chr.obs.data$date <- as.POSIXct(junk$date, format = "%m/%d/%Y")
 
-lng.NAs <- is.na(junk$flow)
+## convert flows to numeric
+chr.obs.data$mean_daily_flow_cfs <- as.numeric(chr.obs.data$flow)
 
-## variable names in row 14
-chr.var <- do.call(c, 
-                   strsplit(
-                     gsub(" {1, }$","", 
-                          gsub("^ {1, }", "", chr.obs.data[14])),
-                     split = " {2, }"))
-
-
-# get data Problem: some of the rows will have three columns instead of two if
-# there is a flag for estimated data
-# try using fixed format to split string
-
-chr.data <- 
-  do.call(rbind,
-          strsplit(
-            gsub(" {1, }$","", 
-                 gsub("^ {1, }","", 
-                      chr.obs.data[16:length(chr.obs.data)]
-                      )
-                 ), 
-            split = " {2, }")
-          )
-
-chr.data <- 
-  do.call(rbind,
-          strsplit(
-            gsub(" {1, }$","", 
-                 gsub("^ {1, }","", 
-                      lil.junk[16:length(lil.junk)]
-                 )
-            ), 
-            split = " {2, }")
-  )
-
-
-df.flow.obs <- read.table(file=paste0(chr.flow.dir,"/",chr.flow.file), 
-                          header = TRUE, sep="\t")
-
-df.flow.obs <-cbind(df.flow.obs,
-                    date = strptime(df.flow.obs$record_date, 
-                                    format = "%m-%d-%Y"))
-
+## data.frame to return
+df.flow.obs <- chr.obs.data
 
 # clean up
 if (1*exists("dont.del") == 0) 
