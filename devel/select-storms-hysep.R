@@ -16,7 +16,8 @@ source(file=paste0(chr.dir,"/devel/estimate-flow.R"))
 # the precip data period is shorter than the flow data, so I used the end of the 
 # precip data to clip (shorten) the estimated flow data
 dt.max.p <- max(df.daily.precip$date)
-df.flow.est.clp <- df.flow.est[df.flow.est$date <= dt.max.p, ]
+dt.min.p <- min(df.daily.precip$date)
+df.flow.est.clp <- df.flow.est[df.flow.est$date >= dt.min.p & df.flow.est$date <= dt.max.p, ]
 
 # use max precip between the two gages (src) for daily precip
 df.daily.precip.max.stations <- cbind(summaryBy(prec.sum ~ date_org, 
@@ -556,3 +557,4 @@ dev.off()
 image.list <- c("pot.strm.cur", "df.strm.sum", "df.sum.season")
 save(list = image.list, 
      file = paste0(chr.dir, "/data/storm-data-for-PEST.RData"))
+
