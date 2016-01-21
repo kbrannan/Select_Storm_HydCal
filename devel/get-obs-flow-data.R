@@ -33,7 +33,7 @@ names(chr.obs.data) <- c("date", "mean_daily_flow_cfs")
 chr.obs.data <- chr.obs.data[-1 * length(chr.obs.data$flow), ]
 
 ## convert character to POSIXct for dates
-chr.obs.data$date <- as.POSIXct(junk$date, format = "%m/%d/%Y")
+chr.obs.data$date <- as.POSIXct(chr.obs.data$date, format = "%m/%d/%Y")
 
 ## convert flows to numeric
 chr.obs.data$mean_daily_flow_cfs <- as.numeric(chr.obs.data$flow)
