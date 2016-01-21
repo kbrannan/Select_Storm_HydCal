@@ -1,19 +1,23 @@
+## explcitly setting path
+chr.dir <- "M:/Models/Bacteria/HSPF/HydroCal201506/R_projs/Select_Storm_HydCal"
+
 # local functions
-source(file=paste0(getwd(),"/devel/functions.R"))
+source(file=paste0(chr.dir,"/devel/functions.R"))
 
 # get precip data
-source(file=paste0(getwd(),"/devel/get-precip-data.R"))
+source(file=paste0(chr.dir,"/devel/get-precip-data.R"))
 
 # get observed flow data
-source(file=paste0(getwd(),"/devel/get-obs-flow-data.R"))
+source(file=paste0(chr.dir,"/devel/get-obs-flow-data.R"))
 
 # estimate flow data for Big Elk Cree watershed
-source(file=paste0(getwd(),"/devel/estimate-flow.R"))
+source(file=paste0(chr.dir,"/devel/estimate-flow.R"))
 
 # the precip data period is shorter than the flow data, so I used the end of the 
 # precip data to clip (shorten) the estimated flow data
 dt.max.p <- max(df.daily.precip$date)
-df.flow.est.clp <- df.flow.est[df.flow.est$date <= dt.max.p, ]
+dt.min.p <- min(df.daily.precip$date)
+df.flow.est.clp <- df.flow.est[df.flow.est$date >= dt.min.p & df.flow.est$date <= dt.max.p, ]
 
 # use max precip between the two gages (src) for daily precip
 df.daily.precip.max.stations <- cbind(summaryBy(prec.sum ~ date_org, 
@@ -64,7 +68,7 @@ storms_plot_to_file(
   dates = df.flow.est.clp$date, 
   flow = df.flow.est.clp$mean_daily_flow, 
   precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), "/figures/strmPlots.pdf"))
+  out.file = paste0(chr.dir, "/figures/strmPlots.pdf"))
 
 
 # subset storms for storms with durations greter than or equal to 5 days
@@ -80,7 +84,7 @@ storms_plot_to_file(
      dates = df.flow.est.clp$date, 
       flow = df.flow.est.clp$mean_daily_flow, 
     precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), "/figures/strmPlots5day.pdf"))
+  out.file = paste0(chr.dir, "/figures/strmPlots5day.pdf"))
 
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5")
@@ -115,7 +119,7 @@ storms_plot_to_file(
      dates = df.flow.est.clp$date, 
       flow = df.flow.est.clp$mean_daily_flow, 
     precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), "/figures/strmPlots5daySingle.pdf"))
+  out.file = paste0(chr.dir, "/figures/strmPlots5daySingle.pdf"))
 
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single")
@@ -155,7 +159,7 @@ storms_plot_to_file(
      dates = df.flow.est.clp$date, 
       flow = df.flow.est.clp$mean_daily_flow, 
     precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0.pdf"))
+  out.file = paste0(chr.dir, "/figures/strmPlots5daySinglegt0.pdf"))
 
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single")
@@ -216,7 +220,7 @@ storms_plot_to_file(
   dates = df.flow.est.clp$date, 
   flow = df.flow.est.clp$mean_daily_flow, 
   precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0fafp.pdf"))
+  out.file = paste0(chr.dir, "/figures/strmPlots5daySinglegt0fafp.pdf"))
 
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single.gt0.fafp")
@@ -249,7 +253,7 @@ storms_plot_to_file(
   dates = df.flow.est.clp$date, 
   flow = df.flow.est.clp$mean_daily_flow, 
   precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), "/figures/strmPlots5daySinglegt0fafppgt01.pdf"))
+  out.file = paste0(chr.dir, "/figures/strmPlots5daySinglegt0fafppgt01.pdf"))
 
 # clean up
 clean_up(prev.kp = keep, new.kp = "lst.pot.strm.5.single.gt0.fafp.pgt01")
@@ -295,7 +299,7 @@ storms_plot_to_file(
   dates = df.flow.est.clp$date, 
   flow = df.flow.est.clp$mean_daily_flow, 
   precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), 
+  out.file = paste0(chr.dir, 
                     "/figures/strmPlots5daySinglegt0fafppgt01fbgte.pdf"))
 
 
@@ -349,7 +353,7 @@ storms_plot_to_file(
   dates = df.flow.est.clp$date, 
   flow = df.flow.est.clp$mean_daily_flow, 
   precip = df.daily.precip.max.stations[ , 2], 
-  out.file = paste0(getwd(), 
+  out.file = paste0(chr.dir, 
                     "/figures/strmPlots5daySinglegt0fafppgt01fbgterorle1.pdf"))
 
 
@@ -358,7 +362,7 @@ storm_plot_indiviudal_to_file(
   dates  = df.flow.est.clp$date,
   flow   = df.flow.est.clp$mean_daily_flow,
   precip = df.daily.precip.max.stations[ , 2],
-  out.file  = paste0(getwd(),
+  out.file  = paste0(chr.dir,
                      "/figures/indstrmPlots5daySinglegt0fafppgt01fbgterorle1.pdf"))
 
 # clean up
@@ -505,7 +509,7 @@ df.sum.season <- summaryBy(length.days + peak.tfl + sum.cuft.tfl +
 library(ggplot2)
 
 # open pdf file for output
-pdf(file=paste0(getwd(), "/figures/barplots of stormstats.pdf")
+pdf(file=paste0(chr.dir, "/figures/barplots of stormstats.pdf")
     , width = 11, height = 8.5, onefile = TRUE)
 
 # length in days by season
@@ -552,4 +556,5 @@ dev.off()
 # save results for devloping PEST input
 image.list <- c("pot.strm.cur", "df.strm.sum", "df.sum.season")
 save(list = image.list, 
-     file = paste0(getwd(), "/data/storm-data-for-PEST.RData"))
+     file = paste0(chr.dir, "/data/storm-data-for-PEST.RData"))
+
