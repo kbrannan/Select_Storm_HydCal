@@ -30,13 +30,13 @@ chr.obs.data <- chr.obs.data[ , -3]
 names(chr.obs.data) <- c("date", "mean_daily_flow_cfs")
 
 ## exclude last line which is all "-"
-chr.obs.data <- chr.obs.data[-1 * length(chr.obs.data$flow), ]
+chr.obs.data <- chr.obs.data[-1 * length(chr.obs.data$mean_daily_flow_cfs), ]
 
 ## convert character to POSIXct for dates
 chr.obs.data$date <- as.POSIXct(chr.obs.data$date, format = "%m/%d/%Y")
 
 ## convert flows to numeric
-chr.obs.data$mean_daily_flow_cfs <- as.numeric(chr.obs.data$flow)
+chr.obs.data$mean_daily_flow_cfs <- as.numeric(chr.obs.data$mean_daily_flow_cfs)
 
 ## data.frame to return
 df.flow.obs <- chr.obs.data
