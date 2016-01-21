@@ -24,6 +24,21 @@ chr.obs.data <- scan(file = paste0(chr.flow.dir, "/", chr.flow.file),
 
 lil.junk <- head(chr.obs.data,100)
 
+chr.obs.data <- read.fwf(file = paste0(chr.flow.dir, "/", chr.flow.file), 
+                 widths = c(31,24,26), skip = 15, stringsAsFactors = FALSE)
+
+chr.obs.data <- chr.obs.data[ , -3]
+
+names(chr.obs.data) <- c("date", "flow")
+
+junk <- chr.obs.data
+
+strptime(junk$date[1:5], format = "%m/%d/%Y")
+junk$date <- as.POSIXct(junk$date, format = "%m/%d/%Y")
+junk$flow <- as.numeric(junk$flow)
+
+lng.NAs <- is.na(junk$flow)
+
 ## variable names in row 14
 chr.var <- do.call(c, 
                    strsplit(
@@ -35,6 +50,7 @@ chr.var <- do.call(c,
 # get data Problem: some of the rows will have three columns instead of two if
 # there is a flag for estimated data
 # try using fixed format to split string
+
 chr.data <- 
   do.call(rbind,
           strsplit(
