@@ -10,8 +10,11 @@ library(doBy)
 # check environment for existing data to keep
 keep <- clean_up()
 
+## explcitly setting path
+chr.dir <- "M:/Models/Bacteria/HSPF/HydroCal201506/R_projs/Select_Storm_HydCal"
+
 # set path for the precip data files
-chr.prec.dir <- paste0(strsplit(getwd(),
+chr.prec.dir <- paste0(strsplit(chr.dir,
                                 split = "/R_projs",fixed=TRUE)[[1]][1], "/data")
 
 # get the precip data file names
