@@ -21,7 +21,7 @@ chr.stm.peaks <- paste0(" mpeak", sprintf(n.strms, fmt = "%02i"), "_max         
 # storm volumes in cubic feet
 # use format - "mvol_stm_1            2.8778977E+09    1.000000E-02  mvol_stm"
 # create character vector with the storm volumes in cubic feet
-chr.stm.vols <- paste0(" mvol_stm_", sprintf(n.strms, fmt = "%02i"), "            ",
+chr.stm.vols <- paste0("mvol_stm_", sprintf(n.strms, fmt = "%02i"), "            ",
        sprintf(junk$sum.cuft.tfl, fmt="%1.5E"),
        "        1.000000E-02  mvol_stm")
 
