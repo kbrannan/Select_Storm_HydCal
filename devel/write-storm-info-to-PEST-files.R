@@ -18,15 +18,15 @@ n.strms <- 1:length(df.strm.sum[, 1])
 # storm peaks in cfs
 # use format - "mpeak1_max          7.91000E+03        1.000000E-02  mpeak"
 # create character vector with the storm peaks in cfs
-chr.stm.peaks <- paste0("mpeak", sprintf(n.strms, fmt = "%02i"), "_max          ",
-       sprintf(df.strm.sum$peak.tfl, fmt="%1.5E"), "        1.000000E-02  mpeak")
+chr.stm.peaks <- paste0("mpeak", sprintf(n.strms, fmt = "%02i"), "_max             ",
+       sprintf(df.strm.sum$peak.tfl, fmt="%1.5E"), "     1.000000E-02  mpeak")
 
 # storm volumes in cubic feet
 # use format - "mvol_stm_1            2.8778977E+09    1.000000E-02  mvol_stm"
 # create character vector with the storm volumes in cubic feet
-chr.stm.vols <- paste0("mvol_stm_", sprintf(n.strms, fmt = "%02i"), "            ",
+chr.stm.vols <- paste0("mvol_stm_", sprintf(n.strms, fmt = "%02i"), "             ",
        sprintf(df.strm.sum$sum.cuft.tfl, fmt="%1.5E"),
-       "        1.000000E-02  mvol_stm")
+       "     1.000000E-02  mvol_stm")
 
 # write storm peaks and vols to file
 cat(cbind(chr.stm.peaks,chr.stm.vols), file = paste0(chr.dir, "/", "strm_peaks_vols.dat"), sep = "\n")
