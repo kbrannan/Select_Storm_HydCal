@@ -10,15 +10,16 @@ load(file = paste0(chr.dir, "/data/storm-data-for-PEST.RData"))
 chr.strm.dates <- paste0(" ",format(df.strm.sum$date.bgn, format = "%m/%d/%Y"), "  00:00:00    ",
        format(df.strm.sum$date.end, format = "%m/%d/%Y"), "  24:00:00")
 # write the storm dates to file
-cat(chr.strm.dates, file = "dates_stm.dat", sep = "\n")
+cat(chr.strm.dates, file = paste0(chr.dir, "/dates_stm.dat"), sep = "\n")
 
 # create vector for storm numbers ti use as ids
 n.strms <- 1:length(df.strm.sum[, 1])
 
 # storm peaks in cfs
-# use format - "mpeak1_max          7.91000E+03        1.000000E-02  mpeak"
+# use format - "mpeak_##          7.91000E+03        1.000000E-02  mpeak"
 # create character vector with the storm peaks in cfs
-chr.stm.peaks <- paste0("mpeak", sprintf(n.strms, fmt = "%02i"), "_max             ",
+chr.stm.peaks <- paste0("mpeak_", sprintf(n.strms, fmt = "%02i"), 
+                        "                 ",
        sprintf(df.strm.sum$peak.tfl, fmt="%1.5E"), "     1.000000E-02  mpeak")
 
 # storm volumes in cubic feet
