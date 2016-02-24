@@ -20,6 +20,9 @@ chr.prec.dir <- paste0(strsplit(chr.dir,
 # get the precip data file names
 chr.prec.files <- list.files(chr.prec.dir, pattern = "^DSN.*exp$")
 
+# clean up for daily precip data.frame
+rm(df.daily.precip)
+
 # read and process precip files to get a long data frame of daily precip 
 for (ii in 1:length(chr.prec.files)) {
   tmp.prec.file <- scan(file = paste0(chr.prec.dir, "/", chr.prec.files[ii]),
